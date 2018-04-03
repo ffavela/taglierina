@@ -1,0 +1,5 @@
+*.root
+*~
+*.txt
+*.dont
+.root_hist
