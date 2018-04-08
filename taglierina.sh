@@ -155,7 +155,7 @@ function doAllCuts {
 function listCutTel {
     root -l -q listRoot.C\(\"${1}\"\) | grep "KEY: TCutG" |\
          cut -f2 | cut -d";" -f1 | cut -d"$myPrefix" -f2 |\
-         sed 's/CUT//g' |\
+         sed 's/CUT//g' | sort |\
          while read -r line; do echo "$line - $myShift" | bc ; done
 }
 
