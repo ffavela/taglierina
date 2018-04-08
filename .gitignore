@@ -4,3 +4,4 @@
 *.dont
 .root_hist
 *.bak
+*.conf

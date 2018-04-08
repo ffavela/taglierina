@@ -1,9 +1,11 @@
 #!/bin/bash
 
-#########CONFIGURATION PART##########
-myShift=50000
-myPrefix="h"
-#####################################
+# #########CONFIGURATION PART##########
+# myShift=50000
+# myPrefix="h"
+# #####################################
+
+confFile="tagl.conf"
 
 myCutFile="myCutFile.root"
 specialLogF="specialLogF.txt"
@@ -54,6 +56,7 @@ function checkIfValidN {
 function printHelp {
 	echo -e "usage:"
 	echo -e "\t$(basename $0) -h"
+  echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
 	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile"
 	echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
 	echo -e "\t$(basename $0) -l rootCutFile"
@@ -67,6 +70,10 @@ function printHelp {
 	echo -e "the syntax with -d will delete the cut of telescope telesNum"
 	echo -e "myCutFile.root is the default file in case rootCutFile was not"
 	echo -e "specified.\n"
+
+  echo -e "the ${red}--sampleConf${NC} option will create a sample"
+	echo -e "configuration file named $confFile.\n"
+
 	echo -e "using -t will help create a cut for the particular telescope."
  	echo -e "the -a syntax will take a set of telescopes"
 	echo -e "from a file (goodTelFile), it needs to be"
@@ -95,8 +102,15 @@ function printHelp {
 function checkArgNum {
     if [ $# -eq 1 ] &&  [ "$1" == "-h" ]
     then
-	return
+	      return
+    elif [ $# -eq 1 ] &&  [ "$1" == "--sampleConf" ]
+    then
+        createSampConf
+         return
     fi
+
+    #The rest of the cases need the confiruration file!
+    [ ! -e $confFile ] && echo "error $confFile doesn't exist" && exit 666
 
     if [ "$1" == "-d" ]
     then
@@ -236,7 +250,7 @@ function checkOpt {
 	    # echo "e = $e"
 	    getMeanChans $rootCutFile $spectraFile $e
 	done
-	
+
 	exit 0
     fi
 
@@ -263,8 +277,19 @@ function checkOpt {
     fi
 }
 
+function createSampConf(){
+    echo "#########CONFIGURATION PART##########">$confFile
+    echo "myShift=50000">>$confFile
+    echo "myPrefix=\"h\"">>$confFile
+    echo "#####################################">>$confFile
+    echo "Created configuration file named $confFile"
+    echo "Modify it accordingly to your necessities"
+    exit 0
+}
+
 ##########The usage!!#############################
 checkArgNum $@
+source $confFile
 checkOpt $@
 
 # echo -e "${red}$(basename $0) arguments are ${1} and ${2}${NC}"
