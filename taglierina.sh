@@ -100,6 +100,7 @@ function printHelp {
 }
 
 function checkArgNum {
+    [ $# -eq 0 ] && printHelp && exit 0
     if [ $# -eq 1 ] &&  [ "$1" == "-h" ]
     then
 	      return
