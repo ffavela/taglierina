@@ -67,8 +67,8 @@ function checkIfValidN {
 function printHelp {
 	echo -e "usage:"
 	echo -e "\t$(basename $0) -h"
-  echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
-	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile"
+	echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
+	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
 	echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
 	echo -e "\t$(basename $0) -l rootCutFile"
 	echo -e "\t$(basename $0) -b rootCutFile spectraFile [-t telesNum]\n"
@@ -150,11 +150,13 @@ function checkArgNum {
     fi
 
 
-    if [ $# -ne 3 ]
+    if [ $# -eq 3 ] || [ $# -eq 4 ]
     then
-	printHelp
-	exit 1
+	return
     fi
+
+    printHelp
+    exit 1
 }
 
 function doTheCut {
@@ -162,8 +164,10 @@ function doTheCut {
     value=$1
     let histoNum=$myShift+$value
     histoVar=$myPrefix$histoNum
+    rootCFile=$myCutFile
+    [ ! "$3" = "" ] && rootCFile="$3"
     echo -e "${red}Press enter after selecting the region${NC}"
-    root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${2}\"\)
+    root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${2}\",\"${rootCFile}\"\)
     [ -e $specialLogF ] && echo "exiting inmediately" && rm $specialLogF && exit 666
     echo ""
 }

@@ -5,7 +5,8 @@
 #include "TObject.h"
 
 int myH2Cutter(const char *name,
-		const char *fileName="MySpectra212.root"){
+	       const char *fileName="MySpectra212.root",
+	       const char *myCutFileName="myCutFile.root"){
   const char *input;
 
   const char myCutName[50],innCutName[50];
@@ -32,7 +33,7 @@ int myH2Cutter(const char *name,
   
   myH2Stuff->Draw();
 
-  TFile *myCuts = new TFile("myCutFile.root","update");
+  TFile *myCuts = new TFile(myCutFileName,"update");
   sprintf(myCutName,"%sCUT",name);
   printf("myCutName = %s\n",myCutName);
   TCutG *oldCut=(TCutG *)myCuts->Get(myCutName);
