@@ -1,11 +1,22 @@
 #!/bin/bash
 
+echo "Doing some tests here"
+macrosDir="myRootMacros"
+myWhich=$(which $0)
+if [ ! $myWhich = "./taglierina.sh" ]
+then
+    #Symlink way
+    linkLoc=$(readlink $myWhich)
+    macrosDir="$(dirname $linkLoc)/$macrosDir"
+fi
+
+#Made this an external file, see the --sampleConf option
 # #########CONFIGURATION PART##########
 # myShift=50000
 # myPrefix="h"
 # #####################################
 
-confFile="tagl.conf"
+confFile="tagl.conf" #replacing the above
 
 myCutFile="myCutFile.root"
 specialLogF="specialLogF.txt"
@@ -111,7 +122,12 @@ function checkArgNum {
     fi
 
     #The rest of the cases need the confiruration file!
-    [ ! -e $confFile ] && echo "error $confFile doesn't exist" && exit 666
+    if [ ! -e $confFile ]
+    then
+	echo -e "${red}error:${NC} $confFile doesn't exist." >&2
+	echo -e "use the ${red}--sampleConf${NC} option to generate one" >&2
+	exit 666
+    fi
 
     if [ "$1" == "-d" ]
     then
@@ -147,7 +163,7 @@ function doTheCut {
     let histoNum=$myShift+$value
     histoVar=$myPrefix$histoNum
     echo -e "${red}Press enter after selecting the region${NC}"
-    root -l -q myH2Cutter.C\(\"${histoVar}\",\"${2}\"\)
+    root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${2}\"\)
     [ -e $specialLogF ] && echo "exiting inmediately" && rm $specialLogF && exit 666
     echo ""
 }
@@ -168,7 +184,7 @@ function doAllCuts {
 }
 
 function listCutTel {
-    root -l -q listRoot.C\(\"${1}\"\) | grep "KEY: TCutG" |\
+    root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "KEY: TCutG" |\
          cut -f2 | cut -d";" -f1 | cut -d"$myPrefix" -f2 |\
          sed 's/CUT//g' | sort |\
          while read -r line; do echo "$line - $myShift" | bc ; done
@@ -183,7 +199,7 @@ function getMeanChans {
     # number and then ommiting new line so it will continue to be filled by root
     echo -ne "$3\t"
     # The next will print meanX, meanY
-    root -l -q fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
+    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
 }
 
 function checkOpt {
@@ -209,7 +225,7 @@ function checkOpt {
 	    value=$1
 	    let histoNum=$myShift+$value
 	    histoVar=$myPrefix$histoNum
-	    root -l -q myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
+	    root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
 	echo "Using the delete option"
 	else
 	    echo "error invalid syntax" >&2
@@ -283,7 +299,7 @@ function createSampConf(){
     echo "myShift=50000">>$confFile
     echo "myPrefix=\"h\"">>$confFile
     echo "#####################################">>$confFile
-    echo "Created configuration file named $confFile"
+    echo -e "Created configuration file named ${red}$confFile${NC}."
     echo "Modify it accordingly to your necessities"
     exit 0
 }
