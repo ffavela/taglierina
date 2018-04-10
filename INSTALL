@@ -1,0 +1,10 @@
+To install;
+
+1) mkdir ~/.myPrograms (if it doesn't already exist)
+2) cd ~/.myPrograms
+3) ln -s route/directory/for/taglierina.sh taglierina
+4) Add the following line at the end of your .bashrc (or .zshrc ...):
+
+             export PATH=$PATH:~/.myPrograms
+
+Any new terminal should be able to find "taglierina" when typed.
