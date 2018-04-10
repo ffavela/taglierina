@@ -303,6 +303,9 @@ function createSampConf(){
     echo "myPrefix=\"h\"">>$confFile
     echo "#####################################">>$confFile
     echo -e "Created configuration file named ${red}$confFile${NC}."
+    echo -e "The content is:\n"
+    cat $confFile
+    echo ""
     echo "Modify it accordingly to your necessities"
     exit 0
 }
