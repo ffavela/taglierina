@@ -30,6 +30,7 @@ int myH2Cutter(const char *name,
 
   TCanvas *c1 = new TCanvas("c1", "Select cut region", 900, 750);
   c1->ToggleToolBar();
+  c1->ToggleEventStatus();
   
   myH2Stuff->Draw();
 

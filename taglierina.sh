@@ -1,6 +1,5 @@
 #!/bin/bash
 
-echo "Doing some tests here"
 macrosDir="myRootMacros"
 myWhich=$(which $0)
 if [ ! $myWhich = "./taglierina.sh" ]
