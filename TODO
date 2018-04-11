@@ -1,0 +1,10 @@
+
+- Improve documentation.
+
+- Only use the configuration file if the -t option is required...?
+
+- Implement options while on the cut, not just x (such as typing d for deleting a cut).
+
+- While looping throught the telescopes add a way to start from a certain value.
+
+- Add a way to loop withought a list (and combine it with the previous option).

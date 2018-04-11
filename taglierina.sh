@@ -66,6 +66,7 @@ function checkIfValidN {
 function printHelp {
 	echo -e "usage:"
 	echo -e "\t$(basename $0) -h"
+	echo -e "\t$(basename $0) -n histoName spectraFile rootCutFile"
 	echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
 	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
 	echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
@@ -113,11 +114,16 @@ function checkArgNum {
     [ $# -eq 0 ] && printHelp && exit 0
     if [ $# -eq 1 ] &&  [ "$1" == "-h" ]
     then
-	      return
+	return
+    elif [ $# -eq 4 ] &&  [ "$1" == "-n" ]
+    then
+	shift
+	checkHistStuff  $@
+	exit 0
     elif [ $# -eq 1 ] &&  [ "$1" == "--sampleConf" ]
     then
         createSampConf
-         return
+        return
     fi
 
     #The rest of the cases need the confiruration file!
@@ -161,12 +167,20 @@ function checkArgNum {
 function doTheCut {
     magicS="(int)666"
     value=$1
-    let histoNum=$myShift+$value
-    histoVar=$myPrefix$histoNum
+    if [ $value = "-n" ]
+    then
+	echo "name option is used"
+	shift
+	histoVar=$1
+    else
+	let histoNum=$myShift+$value
+	histoVar=$myPrefix$histoNum
+    fi
+    spectraFile="$2"
     rootCFile=$myCutFile
     [ ! "$3" = "" ] && rootCFile="$3"
     echo -e "${red}Press enter after selecting the region${NC}"
-    root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${2}\",\"${rootCFile}\"\)
+    root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\"\)
     [ -e $specialLogF ] && echo "exiting inmediately" && rm $specialLogF && exit 666
     echo ""
 }
@@ -294,6 +308,20 @@ function checkOpt {
     else
 	echo "Invalid option" >&2
 	exit 2
+    fi
+}
+
+function checkHistStuff {
+    histName="$1"
+    spectraFile="$2"
+
+    [ ! -e "$spectraFile" ] && echo "Error: $spectraFile doesn't exist" >&2 && exit 666
+    myBoolV=$(root -l -q $macrosDir/checkHistExist.C\(\"${histName}\",\"${spectraFile}\) | tail -1)
+    echo $myBoolV
+    if [ $myBoolV = "True" ]
+    then
+	echo "made it"
+	doTheCut "-n" $@
     fi
 }
 
