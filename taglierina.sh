@@ -74,15 +74,20 @@ function printHelp {
 	echo -e "\t$(basename $0) -b rootCutFile spectraFile [-t telesNum]\n"
 	[ "$1" != "extra" ] && return
 	echo "This program ($(basename $0)) is for making cuts on 2D histos"
-	echo "it creates a cut file called myCutFile.root where"
-	echo "the cuts will be stored (to be used by some other program)."
+	echo "it creates a cut file called myCutFile.root (in case rootCutFile"
+	echo "was not defined) where the cuts will be stored"
+	echo "(to be used by some other program). Note that most"
+	echo "of the options are intended for specific telescopes"
+	echo "of CHIMERA."
 	echo ""
 	echo -e "the -h syntax will print this help.\n"
+	echo -e "the -n will use the literal name of the"
+	echo -e "histogram for making the cuts.\n"
 	echo -e "the syntax with -d will delete the cut of telescope telesNum"
 	echo -e "myCutFile.root is the default file in case rootCutFile was not"
 	echo -e "specified.\n"
 
-  echo -e "the ${red}--sampleConf${NC} option will create a sample"
+	echo -e "the ${red}--sampleConf${NC} option will create a sample"
 	echo -e "configuration file named $confFile.\n"
 
 	echo -e "using -t will help create a cut for the particular telescope."
@@ -107,7 +112,6 @@ function printHelp {
 	echo "If the -t option is used here, it will do the operation only for the selected telescope."
 	echo -e "In case the histogram already exists in the ${red}cutFileHistos.root${NC} then it will"
 	echo "only print out the two column."
-	echo ""
 }
 
 function checkArgNum {
