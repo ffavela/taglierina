@@ -214,6 +214,7 @@ function doAllCuts {
 
     goodTelFile=$1
     spectraFile=$2
+    myRCFile=$3
     readarray tArr < $goodTelFile
     for value in ${tArr[*]}
     do
@@ -222,7 +223,7 @@ function doAllCuts {
 	[ "$value" = "" ] && exit 0
 	echo "Value - $value"
 
-	doTheCut $optionalVar $value $spectraFile
+	doTheCut $optionalVar $value $spectraFile $myRCFile
     done
 }
 
