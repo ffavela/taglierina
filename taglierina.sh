@@ -67,10 +67,12 @@ function printHelp {
 	echo -e "usage:"
 	echo -e "\t$(basename $0) -h"
 	echo -e "\t$(basename $0) -n histoName spectraFile rootCutFile"
+	echo -e "\t$(basename $0) -an histoNameFile spectraFile rootCutFile"
 	echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
 	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
 	echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
 	echo -e "\t$(basename $0) -l rootCutFile"
+	echo -e "\t$(basename $0) -ln rootFile [rootObject]"
 	echo -e "\t$(basename $0) -b rootCutFile spectraFile [-t telesNum]\n"
 	[ "$1" != "extra" ] && return
 	echo "This program ($(basename $0)) is for making cuts on 2D histos"
@@ -83,6 +85,8 @@ function printHelp {
 	echo -e "the -h syntax will print this help.\n"
 	echo -e "the -n will use the literal name of the"
 	echo -e "histogram for making the cuts.\n"
+	echo "the -an will take a one column file with a list of names"
+	echo -e "and do a loop over them for making the cuts.\n"
 	echo -e "the syntax with -d will delete the cut of telescope telesNum"
 	echo -e "myCutFile.root is the default file in case rootCutFile was not"
 	echo -e "specified.\n"
@@ -104,6 +108,10 @@ function printHelp {
 	echo ""
 	echo "the -l option lists the telescopes with graphical cuts in a root file."
 	echo ""
+	echo ""
+	echo "the -ln option lists the objects  (TH1F, TH2F, TCutG, etc) in a root file."
+	echo "If rootObject is ommited then it does a raw root ls."
+	echo ""
 	echo "the -b syntax will create cut histograms using the cuts defined in rootCutFile"
 	echo "checking every element in the corresponding histogram (in spectraFile) is inside the"
 	echo -e "cut. It creates the corresponding cut histograms in the file ${red}cutFileHistos.root${NC}"
@@ -112,6 +120,7 @@ function printHelp {
 	echo "If the -t option is used here, it will do the operation only for the selected telescope."
 	echo -e "In case the histogram already exists in the ${red}cutFileHistos.root${NC} then it will"
 	echo "only print out the two column."
+	echo ""
 }
 
 function checkArgNum {
@@ -144,6 +153,11 @@ function checkArgNum {
     fi
 
     if [ "$1" == "-l" ]
+    then
+	return
+    fi
+
+    if [ "$1" == "-ln" ]
     then
 	return
     fi
@@ -190,6 +204,14 @@ function doTheCut {
 }
 
 function doAllCuts {
+    opnionalVar=""
+    if [ "$1" = "-na" ]
+    then
+	echo "Looping through named histograms"
+	optionalVar="-n"
+	shift
+    fi
+
     goodTelFile=$1
     spectraFile=$2
     readarray tArr < $goodTelFile
@@ -200,7 +222,7 @@ function doAllCuts {
 	[ "$value" = "" ] && exit 0
 	echo "Value - $value"
 
-	doTheCut $value $spectraFile
+	doTheCut $optionalVar $value $spectraFile
     done
 }
 
@@ -209,6 +231,19 @@ function listCutTel {
          cut -f2 | cut -d";" -f1 | cut -d"$myPrefix" -f2 |\
          sed 's/CUT//g' | sort |\
          while read -r line; do echo "$line - $myShift" | bc ; done
+}
+
+function listRootObjs {
+    myFile=$1
+
+    if [ "$2" = "" ]
+    then
+	root -l -q $macrosDir/listRoot.C\(\"${1}\"\)
+    else
+	rootObj="KEY: $2"
+	root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "$rootObj" |\
+            cut -f2 | cut -d";" -f1
+    fi
 }
 
 function getMeanChans {
@@ -262,6 +297,13 @@ function checkOpt {
             echo "error: second argument has to be a cut file">&2 && exit 667
 	listCutTel $1
     exit 0
+    elif [ "$1" = "-ln" ]
+    then
+	shift
+	[ ! -f "$1" ] &&\
+            echo "error: second argument has to be a root file">&2 && exit 668
+	listRootObjs $@
+    exit 0
     elif [ "$1" = "-b" ]
 	then
 	shift
@@ -309,6 +351,13 @@ function checkOpt {
 	[ ! -f $goodTelFile ] && echo "error: $goodTelFile is not a valid file" >&2 && exit 4
 	shift
 	doAllCuts $@
+    elif [ "$1" = "-na" ]
+    then
+	nameFile=$2
+	#Do a check if file exists and it is a regular file.
+	[ ! -f $nameFile ] && echo "error: $nameFile is not a valid file" >&2 && exit 4
+	shift
+	doAllCuts -na $@
     else
 	echo "Invalid option" >&2
 	exit 2
