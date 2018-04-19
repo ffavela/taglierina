@@ -123,6 +123,15 @@ function printHelp {
 	echo ""
 }
 
+function checkIfConfFile {
+    if [ ! -e $confFile ]
+    then
+	echo -e "${red}error:${NC} $confFile doesn't exist." >&2
+	echo -e "use the ${red}--sampleConf${NC} option to generate one" >&2
+	exit 666
+    fi
+}
+
 function checkArgNum {
     [ $# -eq 0 ] && printHelp && exit 0
     if [ $# -eq 1 ] &&  [ "$1" == "-h" ]
@@ -137,14 +146,6 @@ function checkArgNum {
     then
         createSampConf
         return
-    fi
-
-    #The rest of the cases need the confiruration file!
-    if [ ! -e $confFile ]
-    then
-	echo -e "${red}error:${NC} $confFile doesn't exist." >&2
-	echo -e "use the ${red}--sampleConf${NC} option to generate one" >&2
-	exit 666
     fi
 
     if [ "$1" == "-d" ]
@@ -266,6 +267,7 @@ function checkOpt {
 	exit 1
     elif [ "$1" = "-d" ]
     then
+	checkIfConfFile && source $confFile
 	echo "Using the delete option"
 	shift
 	if [ $# -eq 1 ] || [ $# -eq 2 ]
@@ -293,6 +295,7 @@ function checkOpt {
     fi
     if [ "$1" = "-l" ]
     then
+	checkIfConfFile && source $confFile
 	shift
 	[ ! -f "$1" ] &&\
             echo "error: second argument has to be a cut file">&2 && exit 667
@@ -306,14 +309,16 @@ function checkOpt {
 	listRootObjs $@
     exit 0
     elif [ "$1" = "-b" ]
-	then
+    then
+	checkIfConfFile && source $confFile
 	shift
 	rootCutFile="$1"
 	spectraFile="$2"
 	[ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
             echo "error: both files have to exist">&2 && exit 888
 	if [ "$3" = "-t" ]
-	    then
+	then
+	    checkIfConfFile && source $confFile
 	    checkIfValidN "$4"
 	    listCutTel "$rootCutFile" | grep "^$4$" > /dev/null
 	    bFound=$?
@@ -340,6 +345,7 @@ function checkOpt {
     [ ! -e $spectraFile ] && echo "error: $spectraFile is not a valid spectraFile" && exit 5
     if [ "$1" = "-t" ]
     then
+	checkIfConfFile && source $confFile
 	telesNum=$2
 	#Then do a check if it is a valid telescope
 	checkIfValidN $telesNum
@@ -347,6 +353,7 @@ function checkOpt {
 	doTheCut $@
     elif [ "$1" = "-a" ]
     then
+	checkIfConfFile && source $confFile
 	goodTelFile=$2
 	#Do a check if file exists and it is a regular file.
 	[ ! -f $goodTelFile ] && echo "error: $goodTelFile is not a valid file" >&2 && exit 4
