@@ -67,7 +67,7 @@ function printHelp {
 	echo -e "usage:"
 	echo -e "\t$(basename $0) -h"
 	echo -e "\t$(basename $0) -n histoName spectraFile rootCutFile"
-	echo -e "\t$(basename $0) -an histoNameFile spectraFile rootCutFile"
+	echo -e "\t$(basename $0) -na histoNameFile spectraFile rootCutFile"
 	echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
 	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
 	echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
