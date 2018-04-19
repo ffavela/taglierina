@@ -50,7 +50,7 @@ int myH2Cutter(const char *name,
     // stdio or iostream reading methods. like std::cin >> myinputl;
 
     printf("Input d for deleting the cut\n");
-    input = Getline("Type <return> after cut was made (x for exiting): ");
+    input = Getline("Type <return> after cut was made (x (or q) for exiting): ");
     timer->TurnOff();
 
     // Now usefull stuff with the input!
@@ -59,14 +59,19 @@ int myH2Cutter(const char *name,
     //    printf("Stupid stuff\n");
 
     // cout<< "sizeof(input)" <<  sizeof(input)<<endl;
-    if (input[0] == 'x'){
+    if (input[0] == 'x' || input[0] == 'q'){
       write2File("exit");
       return 666;
     } else if (input[0] == 'd'){
       printf("Deleting the cut & redrawing\n");
       write2File("delete cut");
       return 667;
+    } else if (input[0] == 'b'){
+      printf("Going backward\n");
+      write2File("back");
+      return 668;
     }
+
     if (input) done = kTRUE;
   } while (!done);
 

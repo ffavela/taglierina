@@ -188,7 +188,7 @@ function doTheCut {
     value=$1
     if [ $value = "-n" ]
     then
-	echo "name option is used"
+	echo "name option is used" >&2
 	shift
 	histoVar=$1
     else
@@ -198,7 +198,7 @@ function doTheCut {
     spectraFile="$2"
     rootCFile=$myCutFile
     [ ! "$3" = "" ] && rootCFile="$3"
-    echo -e "${red}Press enter after selecting the region${NC}"
+    echo -e "${red}Press enter after selecting the region${NC}" >&2
 
     runDraw="true"
     while [ "$runDraw" = "true" ]
@@ -207,17 +207,21 @@ function doTheCut {
 	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\"\)
 	if [ -e $specialLogF ]
 	then
-	    echo "specialLogF contents are"
+	    echo "specialLogF contents are" >&2
 	    cat $specialLogF
 	    grep -s "exit" $specialLogF >/dev/null &&\
-		echo "was ordered to exit" &&\
+		echo "was ordered to exit" >&2&&\
 		rm $specialLogF && exit 666
 
+	    grep -s "back" $specialLogF >/dev/null &&\
+		echo "was ordered to go backward">&2 &&\
+		echo "going back">&2 && runDraw="true" && rm $specialLogF && return 1
+
 	    grep -s "delete cut" $specialLogF >/dev/null &&\
-		echo "was ordered to delete cut" &&\
-		root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${rootCFile}\"\)
-	    echo "redrawing"
-	    runDraw="true"
+		echo "was ordered to delete cut">&2 &&\
+		root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${rootCFile}\"\) &&\
+		echo "redrawing">&2 && runDraw="true"
+
 	    rm $specialLogF
 	fi
 	echo ""
@@ -237,13 +241,23 @@ function doAllCuts {
     spectraFile=$2
     myRCFile=$3
     readarray tArr < $goodTelFile
-    for value in ${tArr[*]}
+    arrSize=${#tArr[*]}
+    echo "arrSize = $arrSize"
+    myIdx=0
+
+    # for value in ${tArr[*]}
+    while [ $myIdx -lt $arrSize ]
     do
+	echo -e "${red}myIdx = $myIdx ${NC}"
+
+	[ $myIdx -le 0 ] && myIdx=0
+	value=${tArr[$myIdx]}
 	#Sometimes the last val is "". Make sure you dont leave empty
 	#lines in between or it will exit inmediately.
 	[ "$value" = "" ] && exit 0
 	echo "Value - $value"
-	doTheCut $optionalVar $value $spectraFile $myRCFile
+	doTheCut $optionalVar $value $spectraFile $myRCFile || let myIdx=$myIdx-2
+	let myIdx=$myIdx+1
     done
 }
 
