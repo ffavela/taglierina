@@ -11,10 +11,10 @@ int myH2Cutter(const char *name,
 
   const char myCutName[50],innCutName[50];
 
-  
+
   Bool_t done = kFALSE;
   char tString[50],temp[50],bName[50];
-  
+
   TFile *f = new TFile(fileName,"update");
 
   // printf("Hello wonderful world\n");
@@ -31,7 +31,7 @@ int myH2Cutter(const char *name,
   TCanvas *c1 = new TCanvas("c1", "Select cut region", 900, 750);
   c1->ToggleToolBar();
   c1->ToggleEventStatus();
-  
+
   myH2Stuff->Draw();
 
   TFile *myCuts = new TFile(myCutFileName,"update");
@@ -49,6 +49,7 @@ int myH2Cutter(const char *name,
     // Now let's read the input, we can use here any
     // stdio or iostream reading methods. like std::cin >> myinputl;
 
+    printf("Input d for deleting the cut\n");
     input = Getline("Type <return> after cut was made (x for exiting): ");
     timer->TurnOff();
 
@@ -59,11 +60,12 @@ int myH2Cutter(const char *name,
 
     // cout<< "sizeof(input)" <<  sizeof(input)<<endl;
     if (input[0] == 'x'){
-      FILE *f4Stat = fopen("specialLogF.txt", "w");
-      /* print some text */
-      const char *text = "666 status";
-      fprintf(f4Stat, "Some text: %s\n", text);
+      write2File("exit");
       return 666;
+    } else if (input[0] == 'd'){
+      printf("Deleting the cut & redrawing\n");
+      write2File("delete cut");
+      return 667;
     }
     if (input) done = kTRUE;
   } while (!done);
@@ -83,8 +85,8 @@ int myH2Cutter(const char *name,
     cut=nCut;
   }
   // cut = (TCutG*)gROOT->GetListOfSpecials()->FindObject("CUTG");
-  
-  // input = Getline("Type <return> just waiting: "); 
+
+  // input = Getline("Type <return> just waiting: ");
 
   //Rethink this part improve!!
   if (cut){
@@ -102,12 +104,12 @@ int myH2Cutter(const char *name,
 
       //Unelegant way deleting the old cut
       //myCuts->Delete(myCutName) will not work!
-      
+
       //We need to create a string with the horrible ";1"
       sprintf(innCutName,"%s;1",myCutName);
       //And do the deleting
       myCuts->Delete(innCutName);
-      
+
       cut->Write();
     }
 
@@ -118,4 +120,11 @@ int myH2Cutter(const char *name,
   myCuts->Close();
   return 0;
 }
-                                                                                                                                                       
+
+void write2File(const char *text,
+		const char *logFileN="specialLogF.txt"){
+  FILE *f4Stat = fopen(logFileN, "w");
+  /* print some text */
+  fprintf(f4Stat, "%s\n", text);
+  return;
+}

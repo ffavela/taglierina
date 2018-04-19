@@ -199,9 +199,29 @@ function doTheCut {
     rootCFile=$myCutFile
     [ ! "$3" = "" ] && rootCFile="$3"
     echo -e "${red}Press enter after selecting the region${NC}"
-    root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\"\)
-    [ -e $specialLogF ] && echo "exiting inmediately" && rm $specialLogF && exit 666
-    echo ""
+
+    runDraw="true"
+    while [ "$runDraw" = "true" ]
+    do
+	runDraw="false"
+	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\"\)
+	if [ -e $specialLogF ]
+	then
+	    echo "specialLogF contents are"
+	    cat $specialLogF
+	    grep -s "exit" $specialLogF >/dev/null &&\
+		echo "was ordered to exit" &&\
+		rm $specialLogF && exit 666
+
+	    grep -s "delete cut" $specialLogF >/dev/null &&\
+		echo "was ordered to delete cut" &&\
+		root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${rootCFile}\"\)
+	    echo "redrawing"
+	    runDraw="true"
+	    rm $specialLogF
+	fi
+	echo ""
+    done
 }
 
 function doAllCuts {
@@ -223,7 +243,6 @@ function doAllCuts {
 	#lines in between or it will exit inmediately.
 	[ "$value" = "" ] && exit 0
 	echo "Value - $value"
-
 	doTheCut $optionalVar $value $spectraFile $myRCFile
     done
 }
