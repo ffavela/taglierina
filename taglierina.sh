@@ -163,6 +163,11 @@ function checkArgNum {
 	return
     fi
 
+    if [ "$1" == "-pc" ]
+    then
+	return
+    fi
+
     if [ "$1" == "-b" ]
     then
 	if [ $# -lt 3 ]
@@ -341,6 +346,31 @@ function checkOpt {
             echo "error: second argument has to be a root file">&2 && exit 668
 	listRootObjs $@
     exit 0
+    elif [ "$1" = "-pc" ]
+    then
+	shift
+	[ "$1" = "" ] && echo "Error; need a cutName" >&2 && exit 555
+	[ "$2" = "" ] && echo "Error; need a cutFilename" >&2 && exit 556
+	[ ! -f "$2" ] &&\
+            echo "error: third argument has to be a root cut file">&2 && exit 668
+	cutName=$1
+	cutFN=$2
+
+	# printCutCoords $cutName $cutFN
+	axis=$3
+	myMaxMinVar=$(getMaxAndMin $cutName $cutFN $axis)
+	echo $myMaxMinVar
+
+	partN=$4
+	partBool=$(isNumber $partN)
+	[ $partBool = "false" ] && echo "Error; enter positive integer as last arg" && exit 1234
+	#remember maxMinVar are 2 values
+	getPartitionDelta $myMaxMinVar $partN
+
+	echo "The rangeArr is"
+	getRangeArr $myMaxMinVar $partN
+
+    exit 0
     elif [ "$1" = "-b" ]
     then
 	checkIfConfFile && source $confFile
@@ -432,9 +462,75 @@ function createSampConf(){
     exit 0
 }
 
+function printCutCoords {
+    cutName=$1
+    cutFN=$2
+    root -l -q $macrosDir/printCut.C\(\"$cutName\",\"$cutFN\"\) | grep "x\[.*\]=.*, y\[.*\]=.*" |\
+	sed 's/[x|y]\[[0-9]*\]=//g' | sed 's/, /\t/g' | head -n -1
+}
+
+function getMaxAndMin {
+    cutName=$1
+    cutFN=$2
+
+    if [ "$3" = "x" ] || [ "$3" = "X" ]
+    then
+	myColN=1
+    elif [ "$3" = "y" ] || [ "$3" = "Y" ]
+    then
+	myColN=2
+    else
+	echo "Error; argument has to be an axis (x or y)" >&2
+	exit 890
+    fi
+    myVar=($(printCutCoords $cutName $cutFN | cut -f$myColN | sort -rg))
+    maxVal=${myVar[0]}
+    let lastIdx=${#arr[*]}-1
+    minVal=${myVar[$lastIdx]}
+    echo $maxVal $minVal
+}
+
+function isNumber {
+    myNum=$1
+    re='^[0-9]+$'
+    if ! [[ $myNum =~ $re ]] ; then
+	echo "false"
+    else
+	echo "true"
+    fi
+}
+
+function getPartitionDelta {
+    maxVal=$1
+    minVal=$2
+    partN=$3
+    diff=$(echo "scale=3;$maxVal-$minVal" | bc)
+    delta=$(echo "scale=3;$diff/$partN" | bc)
+    echo $delta
+}
+
+function getAxisName {
+
+}
+
+function getRangeArr {
+    maxVal=$1
+    minVal=$2
+    partN=$3
+    delta=$(getPartitionDelta $maxVal $minVal $partN)
+    arrStr="$minVal"
+    newMax=$minVal
+    for myFVar in $(seq 1 $partN)
+    do
+	newMax=$(echo "scale=3;$newMax+$delta" | bc)
+	arrStr=$arrStr" $newMax"
+    done
+    echo "$arrStr"
+}
+
 ##########The usage!!#############################
 checkArgNum $@
-source $confFile
+# source $confFile
 checkOpt $@
 
 # echo -e "${red}$(basename $0) arguments are ${1} and ${2}${NC}"
