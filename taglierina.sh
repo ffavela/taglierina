@@ -509,9 +509,9 @@ function getPartitionDelta {
     echo $delta
 }
 
-function getAxisName {
+# function getAxisName {
 
-}
+# }
 
 function getRangeArr {
     maxVal=$1
