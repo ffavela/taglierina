@@ -50,6 +50,7 @@ int myH2Cutter(const char *name,
     // stdio or iostream reading methods. like std::cin >> myinputl;
 
     printf("Input d for deleting the cut\n");
+    printf("Input b for going backward (in case of looping)\n");
     input = Getline("Type <return> after cut was made (x (or q) for exiting): ");
     timer->TurnOff();
 
