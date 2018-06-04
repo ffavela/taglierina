@@ -63,64 +63,57 @@ function checkIfValidN {
     fi
 }
 
+function checkIfInt {
+    if [[ $1 =~ ^-?[0-9]+$ ]]
+    then
+	      echo "true"
+    else
+        echo "false"
+    fi
+}
+
 function printHelp {
-	echo -e "usage:"
-	echo -e "\t$(basename $0) -h"
-	echo -e "\t$(basename $0) -n histoName spectraFile rootCutFile"
-	echo -e "\t$(basename $0) -na histoNameFile spectraFile rootCutFile"
-	echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
-	echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
-	echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
-	echo -e "\t$(basename $0) -l rootCutFile"
-	echo -e "\t$(basename $0) -ln rootFile [rootObject]"
-	echo -e "\t$(basename $0) -b rootCutFile spectraFile [-t telesNum]\n"
-	[ "$1" != "extra" ] && return
-	echo "This program ($(basename $0)) is for making cuts on 2D histos"
-	echo "it creates a cut file called myCutFile.root (in case rootCutFile"
-	echo "was not defined) where the cuts will be stored"
-	echo "(to be used by some other program). Note that most"
-	echo "of the options are intended for specific telescopes"
-	echo "of CHIMERA."
-	echo ""
-	echo -e "the -h syntax will print this help.\n"
-	echo -e "the -n will use the literal name of the"
-	echo -e "histogram for making the cuts.\n"
-	echo "the -an will take a one column file with a list of names"
-	echo -e "and do a loop over them for making the cuts.\n"
-	echo -e "the syntax with -d will delete the cut of telescope telesNum"
-	echo -e "myCutFile.root is the default file in case rootCutFile was not"
-	echo -e "specified.\n"
+    echo -e "usage:"
+	  echo -e "\t$(basename $0) -h"
+	  echo -e "\t$(basename $0) -n tNumOrName spectraFile rootCutFile"
+    echo -e "\t$(basename $0) -a tNumFile spectraFile rootCutFile"
+    echo -e "\t$(basename $0) -A histNameFile spectraFile rootCutFile"
+    echo -e "\t$(basename $0) -s sTNum [-e eTNum] spectraFile rootCutFile"
+	  # echo -e "\t$(basename $0) -na histoNameFile spectraFile rootCutFile"
+    echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
+	  # echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
+	  # echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
+    echo -e "\t$(basename $0) -l rootFile [rootObject]"
+    echo -e "\t$(basename $0) --lCut rootCutFile"
+    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition]\n"
+	  [ "$1" != "extra" ] && return
 
-	echo -e "the ${red}--sampleConf${NC} option will create a sample"
-	echo -e "configuration file named $confFile.\n"
+    longExtraStr="\
+  This program ($(basename $0)) is for making cuts on 2D histograms\n\
+and for facilitating the calibration process. Note that some of the\n\
+options are intended for specific telescopes of CHIMERA. Most of\n\
+the options need an existing spectraFile and a rootCutFile that\n\
+gets created in case it did not previously exist. When telescope\n\
+numbers are used, a configuration file is required.\n\n\
+ -h will print this help.\n\
+ -n needs a telescope number or a histogram name.\n\
+ -a needs a file with telescope numbers as a single column.\n\
+ -A needs file with histogram names as a single column.\n\
+ -s needs a starting telescope number, if -e then it will stop\n\
+  until the eTNum telescope, else it will continue until 1191.\n\
+   ${red}--sampleConf${NC} will create a sample configuration file\n\
+     named ${red}$confFile${NC}.\n\
+ -l will list the contents of a root file, if rootObject is used then\n\
+ it will only output those objects.\n\
+ --lCut is equivalent to: $ taglierina -l rootFile TCUTG.\n
+ -b will output the centroid of the histogram inside each of the cuts\n\
+ inside rootCutFile. If -n is used, then it will do it just for the\n\
+ specific corresponding cut. If -p is used then for every cut it will\n\
+ create a partition.
+"
+    echo -e $longExtraStr
 
-	echo -e "using -t will help create a cut for the particular telescope."
- 	echo -e "the -a syntax will take a set of telescopes"
-	echo -e "from a file (goodTelFile), it needs to be"
-	echo -e "a ${red}one column${NC} file of valid chimera telescopes."
-	echo -e "typing x and then <enter> will exit inmediately.\n"
-
-	echo "If there was already a valid cut for a particular telescope, it"
-	echo "will display it. You can modify it and the cut will be updated."
-	echo "You can also make a new cut and the old one will be replaced."
-	echo "If you want to delete a cut that was already on the file then"
-	echo "use the -d option."
-	echo ""
-	echo "the -l option lists the telescopes with graphical cuts in a root file."
-	echo ""
-	echo ""
-	echo "the -ln option lists the objects  (TH1F, TH2F, TCutG, etc) in a root file."
-	echo "If rootObject is ommited then it does a raw root ls."
-	echo ""
-	echo "the -b syntax will create cut histograms using the cuts defined in rootCutFile"
-	echo "checking every element in the corresponding histogram (in spectraFile) is inside the"
-	echo -e "cut. It creates the corresponding cut histograms in the file ${red}cutFileHistos.root${NC}"
-	echo "the filename depends on the name of the rootCutFile. It also outputs two columns, "
-	echo "one is the telescope number and the second is the median channel of the histogram."
-	echo "If the -t option is used here, it will do the operation only for the selected telescope."
-	echo -e "In case the histogram already exists in the ${red}cutFileHistos.root${NC} then it will"
-	echo "only print out the two column."
-	echo ""
+	  echo ""
 }
 
 function checkIfConfFile {
@@ -134,6 +127,7 @@ function checkIfConfFile {
 
 function checkArgNum {
     [ $# -eq 0 ] && printHelp && exit 0
+    [ "$1" = "--test" ] && checkIfInt $2 && exit 0
     if [ $# -eq 1 ] &&  [ "$1" == "-h" ]
     then
 	return
@@ -299,37 +293,58 @@ function getMeanChans {
 }
 
 function checkOpt {
+    [ $# -eq 0 ] && printHelp && exit 0
+    [ "$1" = "--test" ] && checkIfInt $2 && exit 0
+
     if [ "$1" = "-h" ]
     then
-	printHelp "extra"
-	exit 1
+	      printHelp "extra"
+	      exit 1
+    elif [ "$1" = "-n" ]
+    then
+        echo "entered new cond"
+        shift
+        intBool=$(checkIfInt $1)
+        echo "intBool = $intBool"
+        if [ $intBool = "true" ]
+        then
+            echo "it is an integer (telescope)"
+            checkIfConfFile && source $confFile
+            #The conf file has to exist to reach here
+            checkIfValidN "$1"
+            doTheCut $@
+        else
+            echo "It is an histogram name"
+            doTheCut -n $@
+        fi
+            exit 345
+
     elif [ "$1" = "-d" ]
     then
-	checkIfConfFile && source $confFile
-	echo "Using the delete option"
-	shift
-	if [ $# -eq 1 ] || [ $# -eq 2 ]
-	then
-	    echo "deleting the cut corresponding to $1"
-	    if [ $# -eq 2 ]
-	    then
-		cutFile=$2
-	    else
-		cutFile=$myCutFile
-	    fi
-	    echo "using $cutFile"
-	    [ ! -f $cutFile ] && echo "$cutFile does not exist" >&2 && exit 789
-	    value=$1
-	    let histoNum=$myShift+$value
-	    histoVar=$myPrefix$histoNum
-	    root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
-	echo "Using the delete option"
-	else
-	    echo "error invalid syntax" >&2
-	    exit 8
-	fi
-
-	exit 1
+	      checkIfConfFile && source $confFile
+	      echo "Using the delete option"
+	      shift
+	      if [ $# -eq 1 ] || [ $# -eq 2 ]
+	      then
+	          echo "deleting the cut corresponding to $1"
+	          if [ $# -eq 2 ]
+	          then
+		            cutFile=$2
+	          else
+		            cutFile=$myCutFile
+	          fi
+	          echo "using $cutFile"
+	          [ ! -f $cutFile ] && echo "$cutFile does not exist" >&2 && exit 789
+	          value=$1
+	          let histoNum=$myShift+$value
+	          histoVar=$myPrefix$histoNum
+	          root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
+	          echo "Using the delete option"
+	      else
+	          echo "error invalid syntax" >&2
+	          exit 8
+	      fi
+	      exit 1
     fi
     if [ "$1" = "-l" ]
     then
@@ -529,7 +544,7 @@ function getRangeArr {
 }
 
 ##########The usage!!#############################
-checkArgNum $@
+# checkArgNum $@
 # source $confFile
 checkOpt $@
 
