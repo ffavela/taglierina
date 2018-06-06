@@ -15,6 +15,9 @@ fi
 # myPrefix="h"
 # #####################################
 
+minTeles=0
+maxTeles=1191
+
 confFile="tagl.conf" #replacing the above
 
 myCutFile="myCutFile.root"
@@ -47,9 +50,6 @@ function minMaxAv {
 }
 
 function checkIfValidN {
-    minTeles=0
-    maxTeles=1191
-
     if ! [[ $1 =~ ^-?[0-9]+$ ]]
     then
 	echo -e "${red}error:${NC} $1 not a valid telescope number" >&2
@@ -72,17 +72,23 @@ function checkIfInt {
     fi
 }
 
+function intError {
+    varN=$1
+    echo "error: $varN needs to be a number ">&2
+    exit 8912
+}
+
 function printHelp {
     echo -e "usage:"
 	  echo -e "\t$(basename $0) -h"
 	  echo -e "\t$(basename $0) -n tNumOrName spectraFile rootCutFile"
-    echo -e "\t$(basename $0) -a tNumFile spectraFile rootCutFile"
-    echo -e "\t$(basename $0) -A histNameFile spectraFile rootCutFile"
+    echo -e "\t$(basename $0) -a tNumOrNameFile spectraFile\
+ rootCutFile"
     echo -e "\t$(basename $0) -s sTNum [-e eTNum] spectraFile rootCutFile"
 	  # echo -e "\t$(basename $0) -na histoNameFile spectraFile rootCutFile"
     echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
 	  # echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
-	  # echo -e "\t$(basename $0) -d telesNum [rootCutFile]"
+	  echo -e "\t$(basename $0) -d tNumOrName rootCutFile"
     echo -e "\t$(basename $0) -l rootFile [rootObject]"
     echo -e "\t$(basename $0) --lCut rootCutFile"
     echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition]\n"
@@ -103,9 +109,10 @@ numbers are used, a configuration file is required.\n\n\
   until the eTNum telescope, else it will continue until 1191.\n\
    ${red}--sampleConf${NC} will create a sample configuration file\n\
      named ${red}$confFile${NC}.\n\
+ -d deletes the specified cut.\n\
  -l will list the contents of a root file, if rootObject is used then\n\
  it will only output those objects.\n\
- --lCut is equivalent to: $ taglierina -l rootFile TCUTG.\n
+ --lCut will list the telescope numbers that have cuts.\n
  -b will output the centroid of the histogram inside each of the cuts\n\
  inside rootCutFile. If -n is used, then it will do it just for the\n\
  specific corresponding cut. If -p is used then for every cut it will\n\
@@ -114,6 +121,63 @@ numbers are used, a configuration file is required.\n\n\
     echo -e $longExtraStr
 
 	  echo ""
+}
+
+function syntaxErrF {
+    echo -e "${red}Syntax error${NC}" >&2
+    printHelp
+    exit 555
+}
+
+function existFileErr {
+    if [ "$2" = "" ]
+    then
+        echo -e "Parameter ${red}$1${NC} can't be empty" >&2
+    else
+        echo -e "File ${red}$1 = $2${NC} has to exist" >&2
+    fi
+    printHelp
+    exit 555
+}
+
+function existFileErr2 {
+    if [ "$2" = "" ]
+    then
+        echo -e "Parameter ${red}$1${NC} can't be empty" >&2
+    fi
+    printHelp
+    exit 555
+}
+
+function checkTypErr {
+    tNumOrName="$1"
+    spectraFile="$2"
+    rootCutFile="$3"
+    [ "$tNumOrName" = "" ] && syntaxErrF
+    [ ! -f "$spectraFile" ] &&\
+        existFileErr spectraFile $spectraFile
+    [ "$rootCutFile" = "" ] &&\
+        existFileErr2 rootCutFile
+}
+
+function checkTypErr2 {
+    tNumOrNameFile="$1"
+    spectraFile="$2"
+    rootCutFile="$3"
+    [ "$tNumOrNameFile" = "" ] && syntaxErrF
+    [ ! -f "$spectraFile" ] &&\
+        existFileErr spectraFile $spectraFile
+    [ "$rootCutFile" = "" ] &&\
+        existFileErr2 rootCutFile
+}
+
+function checkTypErr3 {
+    spectraFile="$1"
+    rootCutFile="$2"
+    [ ! -f "$spectraFile" ] &&\
+        existFileErr spectraFile $spectraFile
+    [ "$rootCutFile" = "" ] &&\
+        existFileErr2 rootCutFile
 }
 
 function checkIfConfFile {
@@ -187,12 +251,12 @@ function doTheCut {
     value=$1
     if [ $value = "-n" ]
     then
-	echo "name option is used" >&2
-	shift
-	histoVar=$1
+        echo "name option is used" >&2
+        shift
+        histoVar=$1
     else
-	let histoNum=$myShift+$value
-	histoVar=$myPrefix$histoNum
+	      let histoNum=$myShift+$value
+	      histoVar=$myPrefix$histoNum
     fi
     spectraFile="$2"
     rootCFile=$myCutFile
@@ -228,18 +292,27 @@ function doTheCut {
 }
 
 function doAllCuts {
-    opnionalVar=""
     if [ "$1" = "-na" ]
     then
-	echo "Looping through named histograms"
-	optionalVar="-n"
-	shift
+	      echo "Looping through named histograms"
+        optionalVar="-n"
+	      shift
     fi
 
-    goodTelFile=$1
+    if [ "$1" = "-sE" ] #Start and end opt
+    then
+	      echo "Looping through command line range"
+        sTNum=$2
+        eTNum=$3
+        tArr=($(seq $sTNum $eTNum))
+	      shift 2 #See comment below for why it is not 3
+    else
+        goodTelFile=$1
+        readarray tArr < $goodTelFile
+    fi
+    #In either case it will take starting from second position
     spectraFile=$2
     myRCFile=$3
-    readarray tArr < $goodTelFile
     arrSize=${#tArr[*]}
     echo "arrSize = $arrSize"
     myIdx=0
@@ -247,16 +320,21 @@ function doAllCuts {
     # for value in ${tArr[*]}
     while [ $myIdx -lt $arrSize ]
     do
-	echo -e "${red}myIdx = $myIdx ${NC}"
+        opnionalVar=""
+        echo -e "${red}myIdx = $myIdx ${NC}"
 
-	[ $myIdx -le 0 ] && myIdx=0
-	value=${tArr[$myIdx]}
-	#Sometimes the last val is "". Make sure you dont leave empty
-	#lines in between or it will exit inmediately.
-	[ "$value" = "" ] && exit 0
-	echo "Value - $value"
-	doTheCut $optionalVar $value $spectraFile $myRCFile || let myIdx=$myIdx-2
-	let myIdx=$myIdx+1
+        [ $myIdx -le 0 ] && myIdx=0
+	      value=${tArr[$myIdx]}
+	      #Sometimes the last val is "". Make sure you dont leave empty
+	      #lines in between or it will exit inmediately.
+	      [ "$value" = "" ] && exit 0
+	      echo "Value - $value"
+        intBool=$(checkIfInt $value)
+        [ "$intBool" = "false" ] && echo "it's a named histo" &&\
+            optionalVar="-n"
+	      doTheCut $optionalVar $value $spectraFile $myRCFile ||\
+            let myIdx=$myIdx-2
+	      let myIdx=$myIdx+1
     done
 }
 
@@ -296,7 +374,7 @@ function checkOpt {
     [ $# -eq 0 ] && printHelp && exit 0
     [ "$1" = "--test" ] && checkIfInt $2 && exit 0
 
-    if [ "$1" = "-h" ]
+    if [ "$1" = "-h" ] && [ $# -eq 1 ]
     then
 	      printHelp "extra"
 	      exit 1
@@ -304,63 +382,133 @@ function checkOpt {
     then
         echo "entered new cond"
         shift
-        intBool=$(checkIfInt $1)
+        tNumOrName="$1"
+        spectraFile="$2"
+        rootCutFile="$3"
+        checkTypErr $tNumOrName $spectraFile $rootCutFile
+
+        intBool=$(checkIfInt $tNumOrName)
         echo "intBool = $intBool"
         if [ $intBool = "true" ]
         then
             echo "it is an integer (telescope)"
             checkIfConfFile && source $confFile
             #The conf file has to exist to reach here
-            checkIfValidN "$1"
+            checkIfValidN "$tNumOrName"
             doTheCut $@
         else
-            echo "It is an histogram name"
+            echo "It is an histogram name (maybe)"
             doTheCut -n $@
         fi
-            exit 345
+    elif [ "$1" = "-a" ]
+    then
+        echo "Using the tNumOrNameFile option"
+        shift
+        tNumOrNameFile="$1"
+        spectraFile="$2"
+        rootCutFile="$3"
 
+        checkTypErr2 $tNumOrNameFile $spectraFile $rootCutFile
+        checkIfConfFile && source $confFile
+        doAllCuts $tNumOrNameFile $spectraFile $rootCutFile
+    elif [ "$1" = "-s" ]
+    then
+        echo "Using the sTNum option"
+        shift
+        sTNum="$1"
+        intBool=$(checkIfInt $sTNum)
+        [ "$intBool" = "false" ] && intError sTNum
+
+        eTNum=$maxTeles
+        [ "$2" = "-e" ] && eTNum="$3" &&\
+            shift 2 &&\
+            [ "$eTNum" = "" ] &&\
+            syntaxErrF
+
+        intBool=$(checkIfInt $eTNum)
+        [ "$intBool" = "false" ] && intError eTNum
+        [ $eTNum -gt $maxTeles ] &&\
+            echo "error: eTNum needs to be <= $maxTeles"
+
+        [ $eTNum -lt $sTNum ] &&\
+            echo "error: eTNum has to be >= sTNum">&2 && exit 999
+
+        echo "Finished here"
+        # tNumOrNameFile="$1"
+        spectraFile="$2"
+        rootCutFile="$3"
+
+        checkTypErr3 $spectraFile $rootCutFile
+        checkIfConfFile && source $confFile
+        doAllCuts -sE $sTNum $eTNum $spectraFile $rootCutFile
+    elif [ $# -eq 1 ] &&  [ "$1" == "--sampleConf" ]
+    then
+        createSampConf
+        exit 0
     elif [ "$1" = "-d" ]
     then
-	      checkIfConfFile && source $confFile
 	      echo "Using the delete option"
 	      shift
-	      if [ $# -eq 1 ] || [ $# -eq 2 ]
-	      then
-	          echo "deleting the cut corresponding to $1"
-	          if [ $# -eq 2 ]
-	          then
-		            cutFile=$2
-	          else
-		            cutFile=$myCutFile
-	          fi
-	          echo "using $cutFile"
-	          [ ! -f $cutFile ] && echo "$cutFile does not exist" >&2 && exit 789
-	          value=$1
-	          let histoNum=$myShift+$value
+        thing2Cut="$1"
+        [ "$thing2Cut" = "" ] && syntaxErrF
+	      echo "deleting the cut corresponding to $thing2Cut"
+        intBool=$(checkIfInt $thing2Cut)
+
+        if [ "$intBool" = "true" ]
+        then
+            echo "It is an integer"
+            checkIfConfFile && source $confFile
+            let histoNum=$myShift+$thing2Cut
 	          histoVar=$myPrefix$histoNum
-	          root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
-	          echo "Using the delete option"
-	      else
-	          echo "error invalid syntax" >&2
-	          exit 8
-	      fi
-	      exit 1
+        else
+            echo "It is a histoName (maybe)"
+            histoVar=$thing2Cut
+        fi
+
+        echo "using $cutFile"
+		    cutFile=$2
+        [ ! -f "$cutFile" ] &&\
+            existFileErr cutFile $cutFile
+
+	      root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
+    elif [ "$1" = "-l" ]
+    then
+        echo "Inside the list option"
+	      checkIfConfFile && source $confFile
+	      shift
+	      [ ! -f "$1" ] &&\
+            echo "error: second argument\
+ has to be a cut file">&2 && printHelp && exit 667
+	      # listCutTel $1
+        listRootObjs $@
+    elif [ "$1" = "--lCut" ]
+    then
+        echo "Inside the list cut option"
+	      checkIfConfFile && source $confFile
+	      shift
+	      [ ! -f "$1" ] &&\
+            echo "error: second argument\
+ has to be a cut file">&2 && printHelp && exit 667
+	      listCutTel $1
     fi
+    echo "STOP HERE"
+    exit 999
     if [ "$1" = "-l" ]
     then
-	checkIfConfFile && source $confFile
-	shift
-	[ ! -f "$1" ] &&\
-            echo "error: second argument has to be a cut file">&2 && exit 667
-	listCutTel $1
-    exit 0
+	      checkIfConfFile && source $confFile
+	      shift
+	      [ ! -f "$1" ] &&\
+            echo "error: second argument\
+has to be a cut file">&2 && exit 667
+	      listCutTel $1
+        exit 0
     elif [ "$1" = "-ln" ]
     then
-	shift
-	[ ! -f "$1" ] &&\
+	      shift
+	      [ ! -f "$1" ] &&\
             echo "error: second argument has to be a root file">&2 && exit 668
-	listRootObjs $@
-    exit 0
+	      listRootObjs $@
+        exit 0
     elif [ "$1" = "-pc" ]
     then
 	shift
