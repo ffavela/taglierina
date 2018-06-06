@@ -180,6 +180,25 @@ function checkTypErr3 {
         existFileErr2 rootCutFile
 }
 
+function getOptVar {
+    opt2Look="$1"
+    shift
+    optVal=""
+
+    while [[ $# -gt 0 ]]
+    do
+        key="$1"
+        if [ "$key" = "$opt2Look" ]
+        then
+            optVal="$2"
+            echo "$optVal"
+            return
+        fi
+        shift
+    done
+    echo ""
+}
+
 function checkIfConfFile {
     if [ ! -e $confFile ]
     then
@@ -350,10 +369,10 @@ function listRootObjs {
 
     if [ "$2" = "" ]
     then
-	root -l -q $macrosDir/listRoot.C\(\"${1}\"\)
+	      root -l -q $macrosDir/listRoot.C\(\"${1}\"\)
     else
-	rootObj="KEY: $2"
-	root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "$rootObj" |\
+	      rootObj="KEY: $2"
+	      root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "$rootObj" |\
             cut -f2 | cut -d";" -f1
     fi
 }
@@ -361,11 +380,18 @@ function listRootObjs {
 function getMeanChans {
     rootCutFile="$1"
     spectraFile="$2"
-    let finalNum=$myShift+$3
-    strHVar=$myPrefix$finalNum
+    histVar="$3"
+    intBool=$(checkIfInt $histVar)
+    if [ "$intBool" = "true" ]
+    then
+        let finalNum=$myShift+$histVar
+        strHVar=$myPrefix$finalNum
+    else
+        strHVar=$histVar
+    fi
     cutHStrVar=$strHVar"CUT"
     # number and then ommiting new line so it will continue to be filled by root
-    echo -ne "$3\t"
+    echo -ne "$histVar\t"
     # The next will print meanX, meanY
     root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
 }
@@ -490,80 +516,108 @@ function checkOpt {
             echo "error: second argument\
  has to be a cut file">&2 && printHelp && exit 667
 	      listCutTel $1
+    elif [ "$1" = "-b" ]
+    then
+	      shift
+	      spectraFile="$1"
+	      rootCutFile="$2"
+
+        checkTypErr3 $spectraFile $rootCutFile
+	      checkIfConfFile && source $confFile
+	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
+        #     echo "error: both files have to exist">&2 && exit 888
+        echo "Doing the optVar funct"
+        nVar=$(getOptVar "-n" "$@")
+        if [ ! "$nVar" = "" ]
+	      then
+            intBool=$(checkIfInt $nVar)
+	          if [ "$intBool" = "true" ]
+            then
+                checkIfConfFile && source $confFile
+	              listCutTel "$rootCutFile" |\
+                    grep "^$nVar$" > /dev/null
+            else
+                nVar=$(basename "$nVar" "CUT")
+	              listRootObjs "$rootCutFile" "TCutG" |\
+                    grep "^$nVar""CUT$" > /dev/null
+            fi
+            bFound=$?
+	          [ $bFound -eq 1 ] && echo "histoCut\
+ $nVar not found in cut file" >&2 && exit 999
+	          getMeanChans $rootCutFile $spectraFile $nVar
+	          exit 0
+	      fi
+	      #put the values of the defined cuts in a bash array (use listcuttel function for this)
+	      #echo them as they come for now
+
+	      valCutTel=$(listCutTel "$rootCutFile")
+	      for e in ${valCutTel[*]}
+	      do
+	          # echo "e = $e"
+	          getMeanChans $rootCutFile $spectraFile $e
+	      done
+
+	      exit 0
     fi
+
     echo "STOP HERE"
     exit 999
-    if [ "$1" = "-l" ]
+
+  #   if [ "$1" = "-pc" ]
+  #   then
+	# shift
+	# [ "$1" = "" ] && echo "Error; need a cutName" >&2 && exit 555
+	# [ "$2" = "" ] && echo "Error; need a cutFilename" >&2 && exit 556
+	# [ ! -f "$2" ] &&\
+  #           echo "error: third argument has to be a root cut file">&2 && exit 668
+	# cutName=$1
+	# cutFN=$2
+
+	# # printCutCoords $cutName $cutFN
+	# axis=$3
+	# myMaxMinVar=$(getMaxAndMin $cutName $cutFN $axis)
+	# echo $myMaxMinVar
+
+	# partN=$4
+	# partBool=$(isNumber $partN)
+	# [ $partBool = "false" ] && echo "Error; enter positive integer as last arg" && exit 1234
+	# #remember maxMinVar are 2 values
+	# getPartitionDelta $myMaxMinVar $partN
+
+	# echo "The rangeArr is"
+	# getRangeArr $myMaxMinVar $partN
+
+  #   exit 0
+    if [ "$1" = "-b" ]
     then
 	      checkIfConfFile && source $confFile
 	      shift
-	      [ ! -f "$1" ] &&\
-            echo "error: second argument\
-has to be a cut file">&2 && exit 667
-	      listCutTel $1
-        exit 0
-    elif [ "$1" = "-ln" ]
-    then
-	      shift
-	      [ ! -f "$1" ] &&\
-            echo "error: second argument has to be a root file">&2 && exit 668
-	      listRootObjs $@
-        exit 0
-    elif [ "$1" = "-pc" ]
-    then
-	shift
-	[ "$1" = "" ] && echo "Error; need a cutName" >&2 && exit 555
-	[ "$2" = "" ] && echo "Error; need a cutFilename" >&2 && exit 556
-	[ ! -f "$2" ] &&\
-            echo "error: third argument has to be a root cut file">&2 && exit 668
-	cutName=$1
-	cutFN=$2
-
-	# printCutCoords $cutName $cutFN
-	axis=$3
-	myMaxMinVar=$(getMaxAndMin $cutName $cutFN $axis)
-	echo $myMaxMinVar
-
-	partN=$4
-	partBool=$(isNumber $partN)
-	[ $partBool = "false" ] && echo "Error; enter positive integer as last arg" && exit 1234
-	#remember maxMinVar are 2 values
-	getPartitionDelta $myMaxMinVar $partN
-
-	echo "The rangeArr is"
-	getRangeArr $myMaxMinVar $partN
-
-    exit 0
-    elif [ "$1" = "-b" ]
-    then
-	checkIfConfFile && source $confFile
-	shift
-	rootCutFile="$1"
-	spectraFile="$2"
-	[ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
+	      rootCutFile="$1"
+	      spectraFile="$2"
+	      [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
             echo "error: both files have to exist">&2 && exit 888
-	if [ "$3" = "-t" ]
-	then
-	    checkIfConfFile && source $confFile
-	    checkIfValidN "$4"
-	    listCutTel "$rootCutFile" | grep "^$4$" > /dev/null
-	    bFound=$?
-	    [ $bFound -eq 1 ] && echo "telescope $4 not found in cut file" >&2 && exit 999
-	    # echo "telescope $4 found in cut file, doing histo and stuff"
-	    getMeanChans $rootCutFile $spectraFile $4
-	    exit 0
-	fi
-	#put the values of the defined cuts in a bash array (use listcuttel function for this)
-	#echo them as they come for now
+	      if [ "$3" = "-t" ]
+	      then
+	          checkIfConfFile && source $confFile
+	          checkIfValidN "$4"
+	          listCutTel "$rootCutFile" | grep "^$4$" > /dev/null
+	          bFound=$?
+	          [ $bFound -eq 1 ] && echo "telescope $4 not found in cut file" >&2 && exit 999
+	          # echo "telescope $4 found in cut file, doing histo and stuff"
+	          getMeanChans $rootCutFile $spectraFile $4
+	          exit 0
+	      fi
+	      #put the values of the defined cuts in a bash array (use listcuttel function for this)
+	      #echo them as they come for now
 
-	valCutTel=$(listCutTel "$rootCutFile")
-	for e in ${valCutTel[*]}
-	do
-	    # echo "e = $e"
-	    getMeanChans $rootCutFile $spectraFile $e
-	done
+	      valCutTel=$(listCutTel "$rootCutFile")
+	      for e in ${valCutTel[*]}
+	      do
+	          # echo "e = $e"
+	          getMeanChans $rootCutFile $spectraFile $e
+	      done
 
-	exit 0
+	      exit 0
     fi
 
 
