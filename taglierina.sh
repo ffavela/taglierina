@@ -375,6 +375,38 @@ function doAllCuts {
     done
 }
 
+function getMeanPartData {
+    rootCutFile=$1
+    spectraFile=$2
+
+    nVar=$3
+    axVar=$4
+
+    #remember maxMinVar are 2 values
+    maxMinVar=$(getMaxAndMin $nVar $rootCutFile $axVar)
+    maxVar=$(echo -e "$maxMinVar" | cut -d' ' -f1)
+    minVar=$(echo -e "$maxMinVar" | cut -d' ' -f2)
+
+    pDelta=$(getPartitionDelta $maxMinVar $pVar)
+    myRangeArr=($(getRangeArr $maxMinVar $pVar))
+    let finVar=$pVar-1
+
+    locMin=${myRangeArr[0]}
+    for mRIdx in $(seq 1 $finVar)
+    do
+        locMax=${myRangeArr[$mRIdx]}
+        impVar=$(getMeanChansPartition $rootCutFile $spectraFile\
+                                     $nVar $axVar $locMin $locMax)
+        let mRIdxMin=mRIdx-1
+        hInfo=$(echo $impVar | cut -d' ' -f1 )".$mRIdxMin"
+        xMean=$(echo $impVar | cut -d' ' -f2 )
+        yMean=$(echo $impVar | cut -d' ' -f3 )
+        echo -e "$hInfo\t$xMean\t$yMean"
+
+        locMin=$locMax
+    done
+}
+
 function listCutTel {
     root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "KEY: TCutG" |\
          cut -f2 | cut -d";" -f1 | cut -d"$myPrefix" -f2 |\
@@ -412,6 +444,48 @@ function getMeanChans {
     echo -ne "$histVar\t"
     # The next will print meanX, meanY
     root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
+}
+
+function getMeanChansPartition {
+    boolX="false"
+    boolY="false"
+
+    xMin=0
+    xMax=1024
+
+    yMin=0
+    yMax=1024
+
+    rootCutFile="$1"
+    spectraFile="$2"
+    histVar="$3"
+    axisVar="$4"
+    axisMin="$5"
+    axisMax="$6"
+
+    intBool=$(checkIfInt $histVar)
+    if [ "$intBool" = "true" ]
+    then
+        let finalNum=$myShift+$histVar
+        strHVar=$myPrefix$finalNum
+    else
+        strHVar=$histVar
+    fi
+    cutHStrVar=$strHVar"CUT"
+    # number and then ommiting new line so it will continue to be filled by root
+    echo -ne "$histVar\t"
+    if [ "$axisVar"  = "y" ]
+    then
+        boolY="true"
+        yMin=$axisMin
+        yMax=$axisMax
+    else
+        boolX="true"
+        xMin=$axisMin
+        xMax=$axisMax
+    fi
+    # The next will print meanX, meanY
+    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\",$boolX,$xMin,$xMax,$boolY,$yMin,$yMax\) | tail -1
 }
 
 function checkOpt {
@@ -517,7 +591,6 @@ function checkOpt {
 	      root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${cutFile}\"\)
     elif [ "$1" = "-l" ]
     then
-        echo "Inside the list option"
 	      checkIfConfFile && source $confFile
 	      shift
 	      [ ! -f "$1" ] &&\
@@ -527,7 +600,6 @@ function checkOpt {
         listRootObjs $@
     elif [ "$1" = "--lCut" ]
     then
-        echo "Inside the list cut option"
 	      checkIfConfFile && source $confFile
 	      shift
 	      [ ! -f "$1" ] &&\
@@ -595,12 +667,13 @@ function checkOpt {
             bFound=$?
 	          [ $bFound -eq 1 ] && echo "histoCut\
  $nVar not found in cut file" >&2 && exit 999
-	          getMeanChans $rootCutFile $spectraFile $nVar
-            #remember maxMinVar are 2 values
-            maxMinVar=$(getMaxAndMin $nVar $rootCutFile $axVar)
-            [ ! "$pVar" = "" ] && pDelta=$(getPartitionDelta $maxMinVar $pVar)
-            [ ! "$pDelta" = "" ] && echo "pDelta=$pDelta"
-            [ ! "$pDelta" = "" ] && getRangeArr $maxMinVar $pVar
+
+            if [ ! "$pVar" = "" ]
+            then
+                getMeanPartData $rootCutFile $spectraFile $nVar $axVar
+            else
+                getMeanChans $rootCutFile $spectraFile $nVar
+            fi
 	          exit 0
 	      fi
 	      #put the values of the defined cuts in a bash array (use
@@ -609,21 +682,17 @@ function checkOpt {
 	      valCutTel=$(listCutTel "$rootCutFile")
 	      for e in ${valCutTel[*]}
 	      do
-	          echo "e = $e"
-	          getMeanChans $rootCutFile $spectraFile $e
-            #remember maxMinVar are 2 values
-            maxMinVar=$(getMaxAndMin $e $rootCutFile $axVar)
-            maxVar=$(echo -e "$maxMinVar" | cut -f1)
-            minVar=$(echo -e "$maxMinVar" | cut -f2)
-            [ ! "$pVar" = "" ] && pDelta=$(getPartitionDelta $maxMinVar $pVar)
-            [ ! "$pDelta" = "" ] && echo "pDelta=$pDelta"
-            [ ! "$pDelta" = "" ] && getRangeArr $maxMinVar $pVar
+            if [ ! "$pVar" = "" ]
+            then
+                getMeanPartData $rootCutFile $spectraFile $e $axVar
+            else
+                getMeanChans $rootCutFile $spectraFile $e
+            fi
 	      done
 
 	      exit 0
     fi
 
-    echo "STOP HERE"
     exit 999
 }
 
@@ -692,6 +761,12 @@ function getMaxAndMin {
     maxVal=${myVar[0]}
     let lastIdx=${#myVar[*]}-1
     minVal=${myVar[$lastIdx]}
+
+    #using printf for rounding. In bash the behaviour is ideal but not
+    #in (for example) zshell. Decimal parts under .5 are "grounded"and
+    #over are "ceiled".
+    # printf "%.0f %.0f\n" $maxVal $minVal
+
     echo "$maxVal $minVal"
 }
 

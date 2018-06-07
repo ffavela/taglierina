@@ -14,7 +14,12 @@
 //cutName = "h50768CUT", hName = "h50768"
 
 void fillCutSpectra(const char *cutFN, const char *spectFN,
-		    const char *cutName, const char *hName) {
+                    const char *cutName, const char *hName,
+                    bool myBoolX=false,
+                    float minXR=0, float maxXR=1024,
+                    bool myBoolY=false,
+                    float minYR=0, float maxYR=1024) {
+
   TFile *myCuts = new TFile(cutFN,"update");
   TCutG *cut=(TCutG *)myCuts->Get(cutName);
   TFile *fHistos = new TFile(spectFN,"update");
@@ -27,13 +32,27 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   // myH2Stuff->Draw();
   // cut->Draw("same");
 
-
   int nbinsx = myH2Stuff->GetXaxis()->GetNbins();
   int nbinsy = myH2Stuff->GetYaxis()->GetNbins();
 
   int maxXVal=myH2Stuff->GetXaxis()->GetBinCenter(nbinsx);
   int maxYVal=myH2Stuff->GetYaxis()->GetBinCenter(nbinsy);
-  TH2F *cutSpect = new TH2F("myAwesomeName","ciao",nbinsx,0,maxXVal,nbinsy,0,maxYVal);
+
+  int minXVal=myH2Stuff->GetXaxis()->GetBinCenter(0);
+  int minYVal=myH2Stuff->GetYaxis()->GetBinCenter(0);
+
+  if (myBoolX){
+    minXVal=(int)minXR;
+    maxXVal=(int)maxXR;
+  }
+
+  if (myBoolY){
+    minYVal=(int)minYR;
+    maxYVal=(int)maxYR;
+  }
+
+  minXR=0;
+  TH2F *cutSpect = new TH2F("myAwesomeName","ciao",nbinsx,minXVal,maxXVal,nbinsy,minYVal,maxYVal);
 
   float xCenter, yCenter;
   int xBinNum,yBinNum;
