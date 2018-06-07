@@ -48,12 +48,12 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
       iCont=myH2Stuff->GetBinContent(xBinNum,yBinNum);
 
       if(cut->IsInside(xCenter,yCenter) && iCont > 0){
-	cutSpect->Fill(xCenter,yCenter,iCont);
-	iContCut=cutSpect->GetBinContent(xBinNum,yBinNum);
-	if (iContCut != iCont){
-	  printf("This should never happen!\n");
-	  printf("iContCut = %d != iCont = %d\n",iContCut, iCont);
-	}
+        cutSpect->Fill(xCenter,yCenter,iCont);
+        iContCut=cutSpect->GetBinContent(xBinNum,yBinNum);
+        if (iContCut != iCont){
+          printf("This should never happen!\n");
+          printf("iContCut = %d != iCont = %d\n",iContCut, iCont);
+        }
       }
     }
   }

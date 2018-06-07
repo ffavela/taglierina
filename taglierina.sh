@@ -80,7 +80,7 @@ function intError {
 
 function printHelp {
     echo -e "usage:"
-	  echo -e "\t$(basename $0) -h"
+	  echo -e "\t$(basename $0) [-h|--help]"
 	  echo -e "\t$(basename $0) -n tNumOrName spectraFile rootCutFile"
     echo -e "\t$(basename $0) -a tNumOrNameFile spectraFile\
  rootCutFile"
@@ -91,7 +91,7 @@ function printHelp {
 	  echo -e "\t$(basename $0) -d tNumOrName rootCutFile"
     echo -e "\t$(basename $0) -l rootFile [rootObject]"
     echo -e "\t$(basename $0) --lCut rootCutFile"
-    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition]\n"
+    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]]\n"
 	  [ "$1" != "extra" ] && return
 
     longExtraStr="\
@@ -101,7 +101,7 @@ options are intended for specific telescopes of CHIMERA. Most of\n\
 the options need an existing spectraFile and a rootCutFile that\n\
 gets created in case it did not previously exist. When telescope\n\
 numbers are used, a configuration file is required.\n\n\
- -h will print this help.\n\
+ -h or --help will print this help.\n\
  -n needs a telescope number or a histogram name.\n\
  -a needs a file with telescope numbers as a single column.\n\
  -A needs file with histogram names as a single column.\n\
@@ -113,10 +113,11 @@ numbers are used, a configuration file is required.\n\n\
  -l will list the contents of a root file, if rootObject is used then\n\
  it will only output those objects.\n\
  --lCut will list the telescope numbers that have cuts.\n
- -b will output the centroid of the histogram inside each of the cuts\n\
+ -b will output the centroid of the histograms inside each of the cuts\n\
  inside rootCutFile. If -n is used, then it will do it just for the\n\
  specific corresponding cut. If -p is used then for every cut it will\n\
- create a partition.
+ create a partition on the y axis by default. If --axis option is used\n\
+ then you can explicitly choose either x or y axis.\n
 "
     echo -e $longExtraStr
 
@@ -199,6 +200,23 @@ function getOptVar {
     echo ""
 }
 
+function findOptVar {
+    opt2Look="$1"
+    shift
+
+    while [[ $# -gt 0 ]]
+    do
+        key="$1"
+        if [ "$key" = "$opt2Look" ]
+        then
+            echo "true"
+            return
+        fi
+        shift
+    done
+    echo "false"
+}
+
 function checkIfConfFile {
     if [ ! -e $confFile ]
     then
@@ -211,7 +229,7 @@ function checkIfConfFile {
 function checkArgNum {
     [ $# -eq 0 ] && printHelp && exit 0
     [ "$1" = "--test" ] && checkIfInt $2 && exit 0
-    if [ $# -eq 1 ] &&  [ "$1" == "-h" ]
+    if [[ $# -eq 1  && ( "$1" == "-h" || "$1" = "--help" ) ]]
     then
 	return
     elif [ $# -eq 4 ] &&  [ "$1" == "-n" ]
@@ -400,7 +418,7 @@ function checkOpt {
     [ $# -eq 0 ] && printHelp && exit 0
     [ "$1" = "--test" ] && checkIfInt $2 && exit 0
 
-    if [ "$1" = "-h" ] && [ $# -eq 1 ]
+    if [[ $# -eq 1  && ( "$1" == "-h" || "$1" = "--help" ) ]]
     then
 	      printHelp "extra"
 	      exit 1
@@ -526,8 +544,41 @@ function checkOpt {
 	      checkIfConfFile && source $confFile
 	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
         #     echo "error: both files have to exist">&2 && exit 888
-        echo "Doing the optVar funct"
-        nVar=$(getOptVar "-n" "$@")
+        nVar=""
+        nBool=$(findOptVar "-n" "$@")
+        if [ "$nBool" = "true" ]
+        then
+            nVar=$(getOptVar "-n" "$@")
+            [ "$nVar" = "" ] && echo "error: tNumOrName\
+ can't be empty" && printHelp && exit 593
+        fi
+
+        axVar="y"
+        pVar=""
+        pDelta=""
+        pBool=$(findOptVar "-p" "$@")
+        if [ "$pBool" = "true" ]
+        then
+            pVar=$(getOptVar "-p" "$@")
+            pIntBool=$(checkIfInt $pVar)
+            [ "$pIntBool" = "false" ] &&\
+                intError "partition"
+            [ $pVar -le 0 ] &&\
+                echo "error: partition has to be > 0" &&\
+                exit 7803
+            axBool=$(findOptVar "--axis" "$@")
+            if [ "$axBool" = "true" ]
+            then
+                axVar=$(getOptVar "--axis" "$@")
+                if [[  ! (("$axVar" = "x"   ||  "$axVar" = "X") ||\
+                              ("$axVar" = "y"   ||  "$axVar" = "Y")) ]]
+                then
+                    echo -e "error: ${red}$axVar${NC} invalid axis">&2 &&\
+                        exit 7803
+                fi
+            fi
+        fi
+
         if [ ! "$nVar" = "" ]
 	      then
             intBool=$(checkIfInt $nVar)
@@ -545,16 +596,28 @@ function checkOpt {
 	          [ $bFound -eq 1 ] && echo "histoCut\
  $nVar not found in cut file" >&2 && exit 999
 	          getMeanChans $rootCutFile $spectraFile $nVar
+            #remember maxMinVar are 2 values
+            maxMinVar=$(getMaxAndMin $nVar $rootCutFile $axVar)
+            [ ! "$pVar" = "" ] && pDelta=$(getPartitionDelta $maxMinVar $pVar)
+            [ ! "$pDelta" = "" ] && echo "pDelta=$pDelta"
+            [ ! "$pDelta" = "" ] && getRangeArr $maxMinVar $pVar
 	          exit 0
 	      fi
-	      #put the values of the defined cuts in a bash array (use listcuttel function for this)
-	      #echo them as they come for now
+	      #put the values of the defined cuts in a bash array (use
+	      #listcuttel function for this) echo them as they come for now
 
 	      valCutTel=$(listCutTel "$rootCutFile")
 	      for e in ${valCutTel[*]}
 	      do
-	          # echo "e = $e"
+	          echo "e = $e"
 	          getMeanChans $rootCutFile $spectraFile $e
+            #remember maxMinVar are 2 values
+            maxMinVar=$(getMaxAndMin $e $rootCutFile $axVar)
+            maxVar=$(echo -e "$maxMinVar" | cut -f1)
+            minVar=$(echo -e "$maxMinVar" | cut -f2)
+            [ ! "$pVar" = "" ] && pDelta=$(getPartitionDelta $maxMinVar $pVar)
+            [ ! "$pDelta" = "" ] && echo "pDelta=$pDelta"
+            [ ! "$pDelta" = "" ] && getRangeArr $maxMinVar $pVar
 	      done
 
 	      exit 0
@@ -562,94 +625,6 @@ function checkOpt {
 
     echo "STOP HERE"
     exit 999
-
-  #   if [ "$1" = "-pc" ]
-  #   then
-	# shift
-	# [ "$1" = "" ] && echo "Error; need a cutName" >&2 && exit 555
-	# [ "$2" = "" ] && echo "Error; need a cutFilename" >&2 && exit 556
-	# [ ! -f "$2" ] &&\
-  #           echo "error: third argument has to be a root cut file">&2 && exit 668
-	# cutName=$1
-	# cutFN=$2
-
-	# # printCutCoords $cutName $cutFN
-	# axis=$3
-	# myMaxMinVar=$(getMaxAndMin $cutName $cutFN $axis)
-	# echo $myMaxMinVar
-
-	# partN=$4
-	# partBool=$(isNumber $partN)
-	# [ $partBool = "false" ] && echo "Error; enter positive integer as last arg" && exit 1234
-	# #remember maxMinVar are 2 values
-	# getPartitionDelta $myMaxMinVar $partN
-
-	# echo "The rangeArr is"
-	# getRangeArr $myMaxMinVar $partN
-
-  #   exit 0
-    if [ "$1" = "-b" ]
-    then
-	      checkIfConfFile && source $confFile
-	      shift
-	      rootCutFile="$1"
-	      spectraFile="$2"
-	      [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
-            echo "error: both files have to exist">&2 && exit 888
-	      if [ "$3" = "-t" ]
-	      then
-	          checkIfConfFile && source $confFile
-	          checkIfValidN "$4"
-	          listCutTel "$rootCutFile" | grep "^$4$" > /dev/null
-	          bFound=$?
-	          [ $bFound -eq 1 ] && echo "telescope $4 not found in cut file" >&2 && exit 999
-	          # echo "telescope $4 found in cut file, doing histo and stuff"
-	          getMeanChans $rootCutFile $spectraFile $4
-	          exit 0
-	      fi
-	      #put the values of the defined cuts in a bash array (use listcuttel function for this)
-	      #echo them as they come for now
-
-	      valCutTel=$(listCutTel "$rootCutFile")
-	      for e in ${valCutTel[*]}
-	      do
-	          # echo "e = $e"
-	          getMeanChans $rootCutFile $spectraFile $e
-	      done
-
-	      exit 0
-    fi
-
-
-    spectraFile=$3
-    [ ! -e $spectraFile ] && echo "error: $spectraFile is not a valid spectraFile" && exit 5
-    if [ "$1" = "-t" ]
-    then
-	checkIfConfFile && source $confFile
-	telesNum=$2
-	#Then do a check if it is a valid telescope
-	checkIfValidN $telesNum
-	shift
-	doTheCut $@
-    elif [ "$1" = "-a" ]
-    then
-	checkIfConfFile && source $confFile
-	goodTelFile=$2
-	#Do a check if file exists and it is a regular file.
-	[ ! -f $goodTelFile ] && echo "error: $goodTelFile is not a valid file" >&2 && exit 4
-	shift
-	doAllCuts $@
-    elif [ "$1" = "-na" ]
-    then
-	nameFile=$2
-	#Do a check if file exists and it is a regular file.
-	[ ! -f $nameFile ] && echo "error: $nameFile is not a valid file" >&2 && exit 4
-	shift
-	doAllCuts -na $@
-    else
-	echo "Invalid option" >&2
-	exit 2
-    fi
 }
 
 function checkHistStuff {
@@ -689,22 +664,35 @@ function printCutCoords {
 function getMaxAndMin {
     cutName=$1
     cutFN=$2
+    axVar=$3
+
+    # echo axVar = $axVar >&2
+    intBool=$(checkIfInt $cutName)
+    if [ "$intBool" = "true" ]
+    then
+        let finalNum=$myShift+$cutName
+        strHVar=$myPrefix$finalNum
+    else
+        strHVar=$histVar
+    fi
+    cutHStrVar=$strHVar"CUT"
 
     if [ "$3" = "x" ] || [ "$3" = "X" ]
     then
-	myColN=1
+        myColN=1
     elif [ "$3" = "y" ] || [ "$3" = "Y" ]
     then
-	myColN=2
+	      myColN=2
     else
-	echo "Error; argument has to be an axis (x or y)" >&2
-	exit 890
+	      echo "Error; argument has to be an axis (x or y)" >&2
+	      exit 890
     fi
-    myVar=($(printCutCoords $cutName $cutFN | cut -f$myColN | sort -rg))
+    myVar=($(printCutCoords $cutHStrVar $cutFN |\
+                 cut -f$myColN | sort -rg))
     maxVal=${myVar[0]}
-    let lastIdx=${#arr[*]}-1
+    let lastIdx=${#myVar[*]}-1
     minVal=${myVar[$lastIdx]}
-    echo $maxVal $minVal
+    echo "$maxVal $minVal"
 }
 
 function isNumber {
@@ -739,8 +727,8 @@ function getRangeArr {
     newMax=$minVal
     for myFVar in $(seq 1 $partN)
     do
-	newMax=$(echo "scale=3;$newMax+$delta" | bc)
-	arrStr=$arrStr" $newMax"
+	      newMax=$(echo "scale=3;$newMax+$delta" | bc)
+	      arrStr=$arrStr" $newMax"
     done
     echo "$arrStr"
 }
