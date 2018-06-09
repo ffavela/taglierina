@@ -334,13 +334,17 @@ function doAllCuts {
         optionalVar="-n"
 	      shift
     fi
+    #For the eventual array
+    myIdx=0
 
     if [ "$1" = "-sE" ] #Start and end opt
     then
 	      echo "Looping through command line range"
+        checkIfConfFile && source $confFile
         sTNum=$2
         eTNum=$3
-        tArr=($(seq $sTNum $eTNum))
+        tArr=($(seq 0 $eTNum))
+        myIdx=$sTNum
 	      shift 2 #See comment below for why it is not 3
     else
         goodTelFile=$1
@@ -351,7 +355,6 @@ function doAllCuts {
     myRCFile=$3
     arrSize=${#tArr[*]}
     echo "arrSize = $arrSize"
-    myIdx=0
 
     # for value in ${tArr[*]}
     while [ $myIdx -lt $arrSize ]
@@ -366,8 +369,15 @@ function doAllCuts {
 	      [ "$value" = "" ] && exit 0
 	      echo "Value - $value"
         intBool=$(checkIfInt $value)
-        [ "$intBool" = "false" ] && echo "it's a named histo" &&\
+
+        if [ "$intBool" = "false" ]
+        then
+            echo "it's a named histo"
             optionalVar="-n"
+        else
+            checkIfConfFile && source $confFile
+        fi
+
 	      doTheCut $optionalVar $value $spectraFile $myRCFile ||\
             let myIdx=$myIdx-2
 	      let myIdx=$myIdx+1
@@ -526,7 +536,6 @@ function checkOpt {
         rootCutFile="$3"
 
         checkTypErr2 $tNumOrNameFile $spectraFile $rootCutFile
-        checkIfConfFile && source $confFile
         doAllCuts $tNumOrNameFile $spectraFile $rootCutFile
     elif [ "$1" = "-s" ]
     then
