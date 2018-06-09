@@ -103,8 +103,7 @@ gets created in case it did not previously exist. When telescope\n\
 numbers are used, a configuration file is required.\n\n\
  -h or --help will print this help.\n\
  -n needs a telescope number or a histogram name.\n\
- -a needs a file with telescope numbers as a single column.\n\
- -A needs file with histogram names as a single column.\n\
+ -a needs a file with telescope numbers or names as a single column.\n\
  -s needs a starting telescope number, if -e then it will stop\n\
   until the eTNum telescope, else it will continue until 1191.\n\
    ${red}--sampleConf${NC} will create a sample configuration file\n\
@@ -613,17 +612,32 @@ function checkOpt {
 	      rootCutFile="$2"
 
         checkTypErr3 $spectraFile $rootCutFile
-	      checkIfConfFile && source $confFile
+	      # checkIfConfFile && source $confFile
 	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
         #     echo "error: both files have to exist">&2 && exit 888
         nVar=""
         nBool=$(findOptVar "-n" "$@")
-        if [ "$nBool" = "true" ]
-        then
-            nVar=$(getOptVar "-n" "$@")
-            [ "$nVar" = "" ] && echo "error: tNumOrName\
- can't be empty" && printHelp && exit 593
-        fi
+        [ "$nBool" = "true" ] && nVar=$(getOptVar "-n" "$@")
+
+        # if [ "$nBool" = "true" ]
+        # then
+        #     nVar=$(getOptVar "-n" "$@")
+        #     [ "$nVar" = "" ] &&\
+        #         echo "error: tNumOrName can't be empty" &&\
+        #         printHelp &&\
+        #         exit 593
+        #     intBool=$(checkIfInt $nVar)
+	      #     if [ "$intBool" = "true" ]
+        #     then
+        #         checkIfConfFile && source $confFile
+	      #         listCutTel "$rootCutFile" |\
+        #             grep "^$nVar$" > /dev/null
+        #     else
+        #         nVar=$(basename "$nVar" "CUT")
+	      #         listRootObjs "$rootCutFile" "TCutG" |\
+        #             grep "^$nVar""CUT$" > /dev/null
+        #     fi
+        # fi
 
         axVar="y"
         pVar=""
@@ -678,10 +692,10 @@ function checkOpt {
 	      fi
 	      #put the values of the defined cuts in a bash array (use
 	      #listcuttel function for this) echo them as they come for now
-
-	      valCutTel=$(listCutTel "$rootCutFile")
-	      for e in ${valCutTel[*]}
+	      valCutTel=($(listRootObjs "$rootCutFile" "TCutG"))
+	      for ee in ${valCutTel[*]}
 	      do
+            e=$(basename $ee CUT)
             if [ ! "$pVar" = "" ]
             then
                 getMeanPartData $rootCutFile $spectraFile $e $axVar
@@ -742,7 +756,7 @@ function getMaxAndMin {
         let finalNum=$myShift+$cutName
         strHVar=$myPrefix$finalNum
     else
-        strHVar=$histVar
+        strHVar=$cutName
     fi
     cutHStrVar=$strHVar"CUT"
 
