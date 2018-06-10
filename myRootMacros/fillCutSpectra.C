@@ -85,6 +85,9 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   float meanX,meanY;
   meanX=cutSpect->GetMean(1);
   meanY=cutSpect->GetMean(2);
-  printf("%f\t%f\n",meanX,meanY);
+  if (meanX == 0 && meanY == 0)
+    printf("None\tNone\n");
+  else
+    printf("%0.3f\t%0.3f\n",meanX,meanY);
   // cut->Print();
 }

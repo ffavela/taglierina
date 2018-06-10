@@ -348,7 +348,14 @@ function doAllCuts {
 	      shift 2 #See comment below for why it is not 3
     else
         goodTelFile=$1
-        readarray tArr < $goodTelFile
+        # readarray tArr < $goodTelFile
+        while read line
+        do
+            #Ignoring lines with "#"
+            echo "Current line $line" >&2
+            echo "$line" | grep "#" && continue
+            tArr+=("$line")
+        done < $goodTelFile
     fi
     #In either case it will take starting from second position
     spectraFile=$2
@@ -372,10 +379,13 @@ function doAllCuts {
 
         if [ "$intBool" = "false" ]
         then
-            echo "it's a named histo"
+            echo "it's a named histo">&2
             optionalVar="-n"
         else
+            echo "it's an int">&2
             checkIfConfFile && source $confFile
+            optionalVar=""
+            echo "optionalVar=$optionalVar" >&2
         fi
 
 	      doTheCut $optionalVar $value $spectraFile $myRCFile ||\
@@ -624,6 +634,8 @@ function checkOpt {
 	      # checkIfConfFile && source $confFile
 	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
         #     echo "error: both files have to exist">&2 && exit 888
+        echo -e "#hist\tmeanX\tmeanY"
+
         nVar=""
         nBool=$(findOptVar "-n" "$@")
         [ "$nBool" = "true" ] && nVar=$(getOptVar "-n" "$@")
