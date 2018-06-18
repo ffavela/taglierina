@@ -183,15 +183,15 @@ function checkTypErr3 {
 function getOptVar {
     opt2Look="$1"
     shift
-    optVal=""
+    optVar=""
 
     while [[ $# -gt 0 ]]
     do
         key="$1"
         if [ "$key" = "$opt2Look" ]
         then
-            optVal="$2"
-            echo "$optVal"
+            optVar="$2"
+            echo "$optVar"
             return
         fi
         shift
@@ -723,6 +723,9 @@ function checkOpt {
             else
                 getMeanChans $rootCutFile $spectraFile $e
             fi
+            #Putting 2 spaces for easier analysis with plotting groups
+            #with gnuplot
+            echo -e "\n"
 	      done
 
 	      exit 0
