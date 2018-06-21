@@ -38,20 +38,20 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   int nbinsx = myH2Stuff->GetXaxis()->GetNbins();
   int nbinsy = myH2Stuff->GetYaxis()->GetNbins();
 
-  int maxXVal=myH2Stuff->GetXaxis()->GetBinCenter(nbinsx);
-  int maxYVal=myH2Stuff->GetYaxis()->GetBinCenter(nbinsy);
+  float maxXVal=myH2Stuff->GetXaxis()->GetBinCenter(nbinsx);
+  float maxYVal=myH2Stuff->GetYaxis()->GetBinCenter(nbinsy);
 
-  int minXVal=myH2Stuff->GetXaxis()->GetBinCenter(0);
-  int minYVal=myH2Stuff->GetYaxis()->GetBinCenter(0);
+  float minXVal=myH2Stuff->GetXaxis()->GetBinCenter(0);
+  float minYVal=myH2Stuff->GetYaxis()->GetBinCenter(0);
 
   if (myBoolX){
-    minXVal=(int)minXR;
-    maxXVal=(int)maxXR;
+    minXVal=minXR;
+    maxXVal=maxXR;
   }
 
   if (myBoolY){
-    minYVal=(int)minYR;
-    maxYVal=(int)maxYR;
+    minYVal=minYR;
+    maxYVal=maxYR;
   }
 
   minXR=0;

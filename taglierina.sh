@@ -431,8 +431,10 @@ function getMeanPartData {
     for mRIdx in $(seq 1 $finVar)
     do
         locMax=${myRangeArr[$mRIdx]}
+
         impVar=$(getMeanChansPartition $rootCutFile $spectraFile\
-                                     $nVar $axVar $locMin $locMax)
+                                       $nVar $axVar $locMin $locMax)
+
         let mRIdxMin=mRIdx-1
         hInfo=$(echo $impVar | cut -d' ' -f1 )".$mRIdxMin"
         xMean=$(echo $impVar | cut -d' ' -f2 )
@@ -440,6 +442,7 @@ function getMeanPartData {
         echo -e "$hInfo\t$xMean\t$yMean"
 
         locMin=$locMax
+	impVar=""
     done
 }
 
