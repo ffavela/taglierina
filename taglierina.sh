@@ -416,6 +416,8 @@ function getMeanPartData {
     nVar=$3
     axVar=$4
 
+    pVar=$5
+
     #remember maxMinVar are 2 values
     maxMinVar=$(getMaxAndMin $nVar $rootCutFile $axVar)
     maxVar=$(echo -e "$maxMinVar" | cut -d' ' -f1)
@@ -720,7 +722,7 @@ function checkOpt {
 
             if [ ! "$pVar" = "" ]
             then
-                getMeanPartData $rootCutFile $spectraFile $nVar $axVar
+                getMeanPartData $rootCutFile $spectraFile $nVar $axVar $pVar
             else
                 getMeanChans $rootCutFile $spectraFile $nVar
             fi
@@ -734,7 +736,7 @@ function checkOpt {
             e=$(basename $ee CUT)
             if [ ! "$pVar" = "" ]
             then
-                getMeanPartData $rootCutFile $spectraFile $e $axVar
+                getMeanPartData $rootCutFile $spectraFile $e $axVar $pVar
             else
                 getMeanChans $rootCutFile $spectraFile $e
             fi
