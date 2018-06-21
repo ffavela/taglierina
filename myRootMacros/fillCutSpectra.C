@@ -18,7 +18,10 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
                     bool myBoolX=false,
                     float minXR=0, float maxXR=1024,
                     bool myBoolY=false,
-                    float minYR=0, float maxYR=1024) {
+                    float minYR=0, float maxYR=1024,
+		    bool saveBool=false,
+		    const char *saveFile="cutH.root",
+		    const char *cutHistName="hCuttedHisto") {
 
   TFile *myCuts = new TFile(cutFN,"update");
   TCutG *cut=(TCutG *)myCuts->Get(cutName);
@@ -70,6 +73,7 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
         cutSpect->Fill(xCenter,yCenter,iCont);
         iContCut=cutSpect->GetBinContent(xBinNum,yBinNum);
         if (iContCut != iCont){
+	  //Oddly it happens but I ignore it anyway ;-P
           printf("This should never happen!\n");
           printf("iContCut = %d != iCont = %d\n",iContCut, iCont);
         }
@@ -80,6 +84,27 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   // c2->ToggleEventStatus();
   // cutSpect->Draw();
   // cut->Draw("same");
+
+  //Put the saveBool condition here!!
+
+  if (saveBool==true){
+    TFile *fOut = new TFile(saveFile,"update");
+
+    TH2F *oldHisto=(TH2F *)fOut->Get(cutHistName);
+    if (oldHisto == 0){
+      printf("The spectra did not previosuly exist, creating it.\n");
+    } else {
+      printf("Rewriting histo\n");
+      //Horrible way of deleting the old histo
+      const char inCutHName[50];
+      sprintf(inCutHName,"%s;1",cutHistName);
+      fOut->Delete(inCutHName);
+    }
+    cutSpect->SetName(cutHistName);
+    cutSpect->Write();
+
+    return;
+  }
 
   //The means on x and y
   float meanX,meanY;
