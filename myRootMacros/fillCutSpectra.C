@@ -18,7 +18,10 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
                     bool myBoolX=false,
                     float minXR=0, float maxXR=1024,
                     bool myBoolY=false,
-                    float minYR=0, float maxYR=1024) {
+                    float minYR=0, float maxYR=1024,
+		    bool saveBool=false,
+		    const char *saveFile="cutH.root",
+		    const char *cutHistName="hCuttedHisto") {
 
   TFile *myCuts = new TFile(cutFN,"update");
   TCutG *cut=(TCutG *)myCuts->Get(cutName);
@@ -35,20 +38,20 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   int nbinsx = myH2Stuff->GetXaxis()->GetNbins();
   int nbinsy = myH2Stuff->GetYaxis()->GetNbins();
 
-  int maxXVal=myH2Stuff->GetXaxis()->GetBinCenter(nbinsx);
-  int maxYVal=myH2Stuff->GetYaxis()->GetBinCenter(nbinsy);
+  float maxXVal=myH2Stuff->GetXaxis()->GetBinCenter(nbinsx);
+  float maxYVal=myH2Stuff->GetYaxis()->GetBinCenter(nbinsy);
 
-  int minXVal=myH2Stuff->GetXaxis()->GetBinCenter(0);
-  int minYVal=myH2Stuff->GetYaxis()->GetBinCenter(0);
+  float minXVal=myH2Stuff->GetXaxis()->GetBinCenter(0);
+  float minYVal=myH2Stuff->GetYaxis()->GetBinCenter(0);
 
   if (myBoolX){
-    minXVal=(int)minXR;
-    maxXVal=(int)maxXR;
+    minXVal=minXR;
+    maxXVal=maxXR;
   }
 
   if (myBoolY){
-    minYVal=(int)minYR;
-    maxYVal=(int)maxYR;
+    minYVal=minYR;
+    maxYVal=maxYR;
   }
 
   minXR=0;
@@ -70,6 +73,7 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
         cutSpect->Fill(xCenter,yCenter,iCont);
         iContCut=cutSpect->GetBinContent(xBinNum,yBinNum);
         if (iContCut != iCont){
+	  //Oddly it happens but I ignore it anyway ;-P
           printf("This should never happen!\n");
           printf("iContCut = %d != iCont = %d\n",iContCut, iCont);
         }
@@ -80,6 +84,27 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   // c2->ToggleEventStatus();
   // cutSpect->Draw();
   // cut->Draw("same");
+
+  //Put the saveBool condition here!!
+
+  if (saveBool==true){
+    TFile *fOut = new TFile(saveFile,"update");
+
+    TH2F *oldHisto=(TH2F *)fOut->Get(cutHistName);
+    if (oldHisto == 0){
+      printf("The spectra did not previosuly exist, creating it.\n");
+    } else {
+      printf("Rewriting histo\n");
+      //Horrible way of deleting the old histo
+      const char inCutHName[50];
+      sprintf(inCutHName,"%s;1",cutHistName);
+      fOut->Delete(inCutHName);
+    }
+    cutSpect->SetName(cutHistName);
+    cutSpect->Write();
+
+    return;
+  }
 
   //The means on x and y
   float meanX,meanY;

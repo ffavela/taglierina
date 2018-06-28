@@ -91,8 +91,9 @@ function printHelp {
 	  echo -e "\t$(basename $0) -d tNumOrName rootCutFile"
     echo -e "\t$(basename $0) -l rootFile [rootObject]"
     echo -e "\t$(basename $0) --lCut rootCutFile"
-    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]]\n"
-	  [ "$1" != "extra" ] && return
+    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]]"
+    echo -e "\t$(basename $0) --TH2 spectraFile rootCutFile outFile\n"
+    [ "$1" != "extra" ] && return
 
     longExtraStr="\
   This program ($(basename $0)) is for making cuts on 2D histograms\n\
@@ -116,7 +117,9 @@ numbers are used, a configuration file is required.\n\n\
  inside rootCutFile. If -n is used, then it will do it just for the\n\
  specific corresponding cut. If -p is used then for every cut it will\n\
  create a partition on the y axis by default. If --axis option is used\n\
- then you can explicitly choose either x or y axis.\n
+ then you can explicitly choose either x or y axis.\n\
+--TH2 will update an outFile with TH2 histograms from spectraFile that\n\
+satisfy the cuts inside rootCutFile.\n
 "
     echo -e $longExtraStr
 
@@ -178,6 +181,18 @@ function checkTypErr3 {
         existFileErr spectraFile $spectraFile
     [ "$rootCutFile" = "" ] &&\
         existFileErr2 rootCutFile
+}
+
+function checkTypErr4 {
+    spectraFile="$1"
+    rootCutFile="$2"
+    outFile="$3"
+    [ ! -f "$spectraFile" ] &&\
+        existFileErr spectraFile $spectraFile
+    [ ! -f "$rootCutFile" ] &&\
+        existFileErr rootCutFile $rootCutFile
+    [ "$outFile" = "" ] &&\
+        existFileErr2 outFile
 }
 
 function getOptVar {
@@ -401,6 +416,8 @@ function getMeanPartData {
     nVar=$3
     axVar=$4
 
+    pVar=$5
+
     #remember maxMinVar are 2 values
     maxMinVar=$(getMaxAndMin $nVar $rootCutFile $axVar)
     maxVar=$(echo -e "$maxMinVar" | cut -d' ' -f1)
@@ -414,8 +431,10 @@ function getMeanPartData {
     for mRIdx in $(seq 1 $finVar)
     do
         locMax=${myRangeArr[$mRIdx]}
+
         impVar=$(getMeanChansPartition $rootCutFile $spectraFile\
-                                     $nVar $axVar $locMin $locMax)
+                                       $nVar $axVar $locMin $locMax)
+
         let mRIdxMin=mRIdx-1
         hInfo=$(echo $impVar | cut -d' ' -f1 )".$mRIdxMin"
         xMean=$(echo $impVar | cut -d' ' -f2 )
@@ -423,6 +442,7 @@ function getMeanPartData {
         echo -e "$hInfo\t$xMean\t$yMean"
 
         locMin=$locMax
+	impVar=""
     done
 }
 
@@ -705,7 +725,7 @@ function checkOpt {
 
             if [ ! "$pVar" = "" ]
             then
-                getMeanPartData $rootCutFile $spectraFile $nVar $axVar
+                getMeanPartData $rootCutFile $spectraFile $nVar $axVar $pVar
             else
                 getMeanChans $rootCutFile $spectraFile $nVar
             fi
@@ -719,7 +739,7 @@ function checkOpt {
             e=$(basename $ee CUT)
             if [ ! "$pVar" = "" ]
             then
-                getMeanPartData $rootCutFile $spectraFile $e $axVar
+                getMeanPartData $rootCutFile $spectraFile $e $axVar $pVar
             else
                 getMeanChans $rootCutFile $spectraFile $e
             fi
@@ -729,9 +749,36 @@ function checkOpt {
 	      done
 
 	      exit 0
+    elif [ "$1" = "--TH2" ]
+    then
+	shift
+	checkTypErr4 $@
+	createTH2File $@
+    else
+	echo "error: \"$1\" unkown option" >&2
     fi
 
     exit 999
+}
+
+function createTH2File {
+    spectraFile="$1"
+    rootCutFile="$2"
+    outFile="$3"
+
+    myTHSuffix=$(basename $rootCutFile .cut)
+    myTHSuffix=$(basename $myTHSuffix .root) #Just in case
+    myTHSuffix=$(echo $myTHSuffix | tr '.' 'p' ) #Worst case scenario
+    hCArray=($(listRootObjs $rootCutFile TCutG))
+    echo "Be patient, root file with cutted histograms"
+    for hCV in ${hCArray[*]}
+    do
+	hVBase=$(basename $hCV CUT)
+	hV=$hVBase"_$myTHSuffix"
+	echo $hV
+	# The next will save the cut histo in a file
+	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${hCV}\",\"${hVBase}\","false",0,1024,"false",0,1024,"true",\"$outFile\",\"$hV\"\) > /dev/null
+    done
 }
 
 function checkHistStuff {
