@@ -86,7 +86,6 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   // cut->Draw("same");
 
   //Put the saveBool condition here!!
-
   if (saveBool==true){
     TFile *fOut = new TFile(saveFile,"update");
 

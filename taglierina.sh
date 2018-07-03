@@ -92,7 +92,7 @@ function printHelp {
     echo -e "\t$(basename $0) -l rootFile [rootObject]"
     echo -e "\t$(basename $0) --lCut rootCutFile"
     echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]]"
-    echo -e "\t$(basename $0) --TH2 spectraFile rootCutFile outFile\n"
+    echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile\n"
     [ "$1" != "extra" ] && return
 
     longExtraStr="\
@@ -118,7 +118,7 @@ numbers are used, a configuration file is required.\n\n\
  specific corresponding cut. If -p is used then for every cut it will\n\
  create a partition on the y axis by default. If --axis option is used\n\
  then you can explicitly choose either x or y axis.\n\
---TH2 will update an outFile with TH2 histograms from spectraFile that\n\
+--TH will update an outFile with TH histograms from spectraFile that\n\
 satisfy the cuts inside rootCutFile.\n
 "
     echo -e $longExtraStr
@@ -479,10 +479,22 @@ function getMeanChans {
         strHVar=$histVar
     fi
     cutHStrVar=$strHVar"CUT"
-    # number and then ommiting new line so it will continue to be filled by root
     echo -ne "$histVar\t"
-    # The next will print meanX, meanY
-    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
+    # number and then ommiting new line so it will continue to be filled by root
+    myGreatV=$(root -l -q $macrosDir/probeObj.C\(\"${spectraFile}\"\,\"${strHVar}\"\)| tail -1)
+    if [[ "$myGreatV"  =~ "TH2" ]]
+    then
+	# The next will print meanX, meanY
+	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
+    elif [[ "$myGreatV" =~ "TH1" ]]
+    then
+	maxMinVar=($(getMaxAndMin $strHVar $rootCutFile "x"))
+	maxX=${maxMinVar[0]}
+	minX=${maxMinVar[1]}
+	root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${strHVar}\",$minX,$maxX\) | tail -1
+    else
+	echo "unsuported type"
+    fi
 }
 
 function getMeanChansPartition {
@@ -523,8 +535,22 @@ function getMeanChansPartition {
         xMin=$axisMin
         xMax=$axisMax
     fi
-    # The next will print meanX, meanY
-    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\",$boolX,$xMin,$xMax,$boolY,$yMin,$yMax\) | tail -1
+    myGreatV=$(root -l -q $macrosDir/probeObj.C\(\"${spectraFile}\"\,\"${strHVar}\"\)| tail -1)
+    if [[ "$myGreatV"  =~ "TH2" ]]
+    then
+	# The next will print meanX, meanY
+	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\",$boolX,$xMin,$xMax,$boolY,$yMin,$yMax\) | tail -1
+    elif [[ "$myGreatV" =~ "TH1" ]]
+    then
+	# maxMinVar=($(getMaxAndMin $strHVar $rootCutFile "x"))
+	# maxX=${maxMinVar[0]}
+	# minX=${maxMinVar[1]}
+	# root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${strHVar}\",$minX,$maxX\) | tail -1
+	echo "echo partition unimplemented on TH1" >&2
+	exit 342
+    else
+	echo "unsuported type"
+    fi
 }
 
 function checkOpt {
@@ -538,7 +564,15 @@ function checkOpt {
     elif [ "$1" = "--test" ]
     then
 	echo "Using the testing option"
-	# root -l -q $macrosDir/simpleTH1Mean.C\(\"MySpectra212.root\",\"h10998\",0.0,4056.1\) | tail -1
+
+	echo "using the getMaxAndMin function"
+	maxMinVar=($(getMaxAndMin "h10745" "my1DCuts.cut" "x"))
+	maxX=${maxMinVar[0]}
+	minX=${maxMinVar[1]}
+	echo "maxX=$maxX"
+	echo "minX=$minX"
+
+	root -l -q $macrosDir/simpleTH1Mean.C\(\"MySpectra212.root\",\"h10745\",$minX,$maxX\) | tail -1
 
 	exit 8990
     elif [ "$1" = "-n" ]
@@ -660,7 +694,7 @@ function checkOpt {
 	      # checkIfConfFile && source $confFile
 	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
         #     echo "error: both files have to exist">&2 && exit 888
-        echo -e "#hist\tmeanX\tmeanY"
+        echo -e "#hist\tmeanX\t[meanY]"
 
         nVar=""
         nBool=$(findOptVar "-n" "$@")
@@ -755,11 +789,11 @@ function checkOpt {
 	      done
 
 	      exit 0
-    elif [ "$1" = "--TH2" ]
+    elif [ "$1" = "--TH" ]
     then
 	shift
 	checkTypErr4 $@
-	createTH2File $@
+	createTHFile $@
     else
 	echo "error: \"$1\" unkown option" >&2
     fi
@@ -767,7 +801,7 @@ function checkOpt {
     exit 999
 }
 
-function createTH2File {
+function createTHFile {
     spectraFile="$1"
     rootCutFile="$2"
     outFile="$3"
@@ -782,8 +816,20 @@ function createTH2File {
 	hVBase=$(basename $hCV CUT)
 	hV=$hVBase"_$myTHSuffix"
 	echo $hV
-	# The next will save the cut histo in a file
-	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${hCV}\",\"${hVBase}\","false",0,1024,"false",0,1024,"true",\"$outFile\",\"$hV\"\) > /dev/null
+	myGreatV=$(root -l -q $macrosDir/probeObj.C\(\"${spectraFile}\"\,\"${hVBase}\"\)| tail -1)
+	if [[ "$myGreatV"  =~ "TH2" ]]
+	then
+	    # The next will save the cut histo in a file
+	    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${hCV}\",\"${hVBase}\","false",0,1024,"false",0,1024,"true",\"$outFile\",\"$hV\"\) > /dev/null
+	elif [[ "$myGreatV" =~ "TH1" ]]
+	then
+	    maxMinVar=($(getMaxAndMin $hVBase $rootCutFile "x"))
+	    maxX=${maxMinVar[0]}
+	    minX=${maxMinVar[1]}
+	    root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${hVBase}\",$minX,$maxX,"true",\"$outFile\",\"$hV\"\) | tail -1
+	else
+	    echo "unsuported type"
+	fi
     done
 }
 
