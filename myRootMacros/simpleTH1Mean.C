@@ -9,7 +9,10 @@
 //script
 
 void simpleTH1Mean(const char *spectFN, const char *hName,
-                   float minValCut, float maxValCut) {
+                   float minValCut, float maxValCut,
+		   bool saveBool=false,
+		   const char *saveFile="cutH.root",
+		   const char *cutHistName="hCuttedHisto") {
 
   printf("Hello fantastic amazing world\n");
 
@@ -46,6 +49,26 @@ void simpleTH1Mean(const char *spectFN, const char *hName,
   // c2->ToggleEventStatus();
   // cutSpect->Draw();
   // cut->Draw("same");
+
+  //Put the saveBool condition here!!
+  if (saveBool==true){
+    TFile *fOut = new TFile(saveFile,"update");
+
+    TH2F *oldHisto=(TH2F *)fOut->Get(cutHistName);
+    if (oldHisto == 0){
+      printf("The spectra did not previosuly exist, creating it.\n");
+    } else {
+      printf("Rewriting histo\n");
+      //Horrible way of deleting the old histo
+      const char inCutHName[50];
+      sprintf(inCutHName,"%s;1",cutHistName);
+      fOut->Delete(inCutHName);
+    }
+    cutSpect->SetName(cutHistName);
+    cutSpect->Write();
+
+    return;
+  }
 
   //The means on x and y
   float meanX;
