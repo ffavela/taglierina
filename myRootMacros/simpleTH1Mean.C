@@ -4,18 +4,14 @@
 #include "TSystem.h"
 #include "TObject.h"
 
-//As an example
-//cutFN = "myCutFile.root", spectFN = "MySpectra212.root"
-
 //The next may seem redundant but it simplyfies modifications and a
 //generalization in the future, leaving the name handling to the bash
 //script
 
-//cutName = "h50768CUT", hName = "h50768"
-
-void simpleTH1Mean(const char *spectFN, const char *hName
+void simpleTH1Mean(const char *spectFN, const char *hName,
                    float minValCut, float maxValCut) {
 
+  printf("Hello fantastic amazing world\n");
 
   TFile *fHistos = new TFile(spectFN,"update");
 
@@ -27,8 +23,6 @@ void simpleTH1Mean(const char *spectFN, const char *hName
 
   TH1F *cutSpect = new TH1F("myAwesomeName","ciao",nbinsx,minXVal,maxXVal);
 
-  minXR=0;
-
   float xCenter;
   int xBinNum;
 
@@ -39,9 +33,9 @@ void simpleTH1Mean(const char *spectFN, const char *hName
     xCenter=myH1Stuff->GetXaxis()->GetBinCenter(xBinNum);
     iCont=myH1Stuff->GetBinContent(xBinNum);
 
-    if(cut->IsInside(xCenter,yCenter) && iCont > 0){
+    if( minValCut <= xCenter && xCenter < maxValCut && iCont > 0){
       cutSpect->Fill(xCenter,iCont);
-      iContCut=cutSpect->GetBinContent(xBinNum,yBinNum);
+      iContCut=cutSpect->GetBinContent(xBinNum);
       if (iContCut != iCont){
         printf("This should never happen!\n");
         printf("iContCut = %d != iCont = %d\n",iContCut, iCont);
@@ -54,12 +48,8 @@ void simpleTH1Mean(const char *spectFN, const char *hName
   // cut->Draw("same");
 
   //The means on x and y
-  float meanX,meanY;
+  float meanX;
   meanX=cutSpect->GetMean(1);
-  meanY=cutSpect->GetMean(2);
-  if (meanX == 0 && meanY == 0)
-    printf("None\tNone\n");
-  else
-    printf("%0.3f\t%0.3f\n",meanX,meanY);
+  printf("%0.3f\n",meanX);
   // cut->Print();
 }

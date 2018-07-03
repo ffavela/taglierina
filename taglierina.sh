@@ -529,12 +529,18 @@ function getMeanChansPartition {
 
 function checkOpt {
     [ $# -eq 0 ] && printHelp && exit 0
-    [ "$1" = "--test" ] && checkIfInt $2 && exit 0
+    # [ "$1" = "--test" ] && checkIfInt $2 && exit 0
 
     if [[ $# -eq 1  && ( "$1" == "-h" || "$1" = "--help" ) ]]
     then
 	      printHelp "extra"
 	      exit 1
+    elif [ "$1" = "--test" ]
+    then
+	echo "Using the testing option"
+	# root -l -q $macrosDir/simpleTH1Mean.C\(\"MySpectra212.root\",\"h10998\",0.0,4056.1\) | tail -1
+
+	exit 8990
     elif [ "$1" = "-n" ]
     then
         echo "entered new cond"
