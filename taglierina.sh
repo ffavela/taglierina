@@ -432,14 +432,26 @@ function getMeanPartData {
     do
         locMax=${myRangeArr[$mRIdx]}
 
-        impVar=$(getMeanChansPartition $rootCutFile $spectraFile\
-                                       $nVar $axVar $locMin $locMax)
+        # impVar=$(getMeanChansPartition $rootCutFile $spectraFile\
+                                       # $nVar $axVar $locMin $locMax)
+
+	impVar=($(getMeanChansPartition $rootCutFile $spectraFile\
+                                       $nVar $axVar $locMin $locMax))
 
         let mRIdxMin=mRIdx-1
-        hInfo=$(echo $impVar | cut -d' ' -f1 )".$mRIdxMin"
-        xMean=$(echo $impVar | cut -d' ' -f2 )
-        yMean=$(echo $impVar | cut -d' ' -f3 )
-        echo -e "$hInfo\t$xMean\t$yMean"
+        # hInfo=$(echo $impVar | cut -d' ' -f1 )".$mRIdxMin"
+        # xMean=$(echo $impVar | cut -d' ' -f2 )
+        # yMean=$(echo $impVar | cut -d' ' -f3 )
+        hInfo=${impVar[0]}".$mRIdxMin"
+        xMean=${impVar[1]}
+	xSig=${impVar[2]}
+	xCte=${impVar[3]}
+
+        yMean=${impVar[4]}
+	ySig=${impVar[5]}
+	yCte=${impVar[6]}
+
+        echo -e "$hInfo\t$xMean\t$xSig\t$xCte\t$yMean\t$ySig\t$yCte"
 
         locMin=$locMax
 	impVar=""
@@ -695,7 +707,7 @@ function checkOpt {
 	      # checkIfConfFile && source $confFile
 	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
         #     echo "error: both files have to exist">&2 && exit 888
-        echo -e "#hist\tmeanX\t[meanY]"
+        echo -e "#hist\tmeanX\tsigmaX\tcteX\t[meanX\tsigmaX\tcteX]"
 
         nVar=""
         nBool=$(findOptVar "-n" "$@")
@@ -731,8 +743,8 @@ function checkOpt {
             pIntBool=$(checkIfInt $pVar)
             [ "$pIntBool" = "false" ] &&\
                 intError "partition"
-            [ $pVar -le 0 ] &&\
-                echo "error: partition has to be > 0" &&\
+            [ $pVar -le 1 ] &&\
+                echo "error: partition has to be > 1" &&\
                 exit 7803
             axBool=$(findOptVar "--axis" "$@")
             if [ "$axBool" = "true" ]

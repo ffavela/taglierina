@@ -83,5 +83,5 @@ void simpleTH1Mean(const char *spectFN, const char *hName,
   Double_t p2 = fit->GetParameter(2);//Sigma
 
   // printf("%0.3f\n",meanX);
-  printf("%0.3f\n",p1);
+  printf("%0.3f\t%0.3f\t%0.3f\n",p1,p2,p0);
 }

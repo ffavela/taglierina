@@ -115,7 +115,7 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
 
   //Avoiding errors
   if (meanX == 0 && meanY == 0){
-    printf("None\tNone\n");
+    printf("None\tNone\tNone\tNone\tNone\tNone\n");
     return;
   }
 
@@ -129,19 +129,22 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   TH1D *myProX=(TH1D *)cutSpect->ProjectionX();
   myProX->Fit("gaus","Q0");
   TF1 *fitX = myProX->GetFunction("gaus");
+  Double_t p0X=fitX->GetParameter(0);
   Double_t p1X=fitX->GetParameter(1);
+  Double_t p2X=fitX->GetParameter(2);
 
   TH1D *myProY=(TH1D *)cutSpect->ProjectionY();
   myProY->Fit("gaus","Q0");
   TF1 *fitY = myProY->GetFunction("gaus");
+  Double_t p0Y=fitY->GetParameter(0);
   Double_t p1Y=fitY->GetParameter(1);
+  Double_t p2Y=fitY->GetParameter(2);
 
   //Old way of doing it
   // if (meanX == 0 && meanY == 0)
   //   printf("None\tNone\n");
   // else
-  //   printf("%0.3f\t%0.3f\n",meanX,meanY);
+  //   printf("%0.4f\t%0.4f\n",meanX,meanY);
 
-  printf("%0.3f\t%0.3f\n",p1X,p1Y);
-
+  printf("%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\n",p1X,p2X,p0X,p1Y,p2Y,p0Y);
 }
