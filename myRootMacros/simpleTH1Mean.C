@@ -72,7 +72,16 @@ void simpleTH1Mean(const char *spectFN, const char *hName,
 
   //The means on x and y
   float meanX;
-  meanX=cutSpect->GetMean(1);
-  printf("%0.3f\n",meanX);
-  // cut->Print();
+  // meanX=cutSpect->GetMean(1); //The old way
+
+  //Fitting a gaussian
+  //Q means quiet, 0 means don't do a plot
+  cutSpect->Fit("gaus","Q0");
+  TF1 *fit = cutSpect->GetFunction("gaus");
+  Double_t p0 = fit->GetParameter(0);//Constant
+  Double_t p1 = fit->GetParameter(1);//Mean
+  Double_t p2 = fit->GetParameter(2);//Sigma
+
+  // printf("%0.3f\n",meanX);
+  printf("%0.3f\n",p1);
 }

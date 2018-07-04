@@ -547,6 +547,7 @@ function getMeanChansPartition {
 	# minX=${maxMinVar[1]}
 	# root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${strHVar}\",$minX,$maxX\) | tail -1
 	echo "echo partition unimplemented on TH1" >&2
+	echo "do a control C to stop this madness" >&2
 	exit 342
     else
 	echo "unsuported type"

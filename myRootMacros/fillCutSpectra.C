@@ -70,7 +70,9 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
       iCont=myH2Stuff->GetBinContent(xBinNum,yBinNum);
 
       if(cut->IsInside(xCenter,yCenter) && iCont > 0){
-        cutSpect->Fill(xCenter,yCenter,iCont);
+	if ( minXVal < xCenter && xCenter < maxXVal && minYVal < yCenter && yCenter < maxYVal ){
+	  cutSpect->Fill(xCenter,yCenter,iCont);
+	}
         iContCut=cutSpect->GetBinContent(xBinNum,yBinNum);
         if (iContCut != iCont){
 	  //Oddly it happens but I ignore it anyway ;-P
@@ -107,11 +109,39 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
 
   //The means on x and y
   float meanX,meanY;
+  //Old way of doing it
   meanX=cutSpect->GetMean(1);
   meanY=cutSpect->GetMean(2);
-  if (meanX == 0 && meanY == 0)
+
+  //Avoiding errors
+  if (meanX == 0 && meanY == 0){
     printf("None\tNone\n");
-  else
-    printf("%0.3f\t%0.3f\n",meanX,meanY);
-  // cut->Print();
+    return;
+  }
+
+  //Old way of doing it
+  // if (meanX == 0 && meanY == 0)
+  //   printf("None\tNone\n");
+  // else
+  //   printf("%0.3f\t%0.3f\n",meanX,meanY);
+  // return;
+
+  TH1D *myProX=(TH1D *)cutSpect->ProjectionX();
+  myProX->Fit("gaus","Q0");
+  TF1 *fitX = myProX->GetFunction("gaus");
+  Double_t p1X=fitX->GetParameter(1);
+
+  TH1D *myProY=(TH1D *)cutSpect->ProjectionY();
+  myProY->Fit("gaus","Q0");
+  TF1 *fitY = myProY->GetFunction("gaus");
+  Double_t p1Y=fitY->GetParameter(1);
+
+  //Old way of doing it
+  // if (meanX == 0 && meanY == 0)
+  //   printf("None\tNone\n");
+  // else
+  //   printf("%0.3f\t%0.3f\n",meanX,meanY);
+
+  printf("%0.3f\t%0.3f\n",p1X,p1Y);
+
 }
