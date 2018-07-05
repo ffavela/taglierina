@@ -10,6 +10,7 @@
 
 void simpleTH1Mean(const char *spectFN, const char *hName,
                    float minValCut, float maxValCut,
+		   bool hMeanB=false,
 		   bool saveBool=false,
 		   const char *saveFile="cutH.root",
 		   const char *cutHistName="hCuttedHisto") {
@@ -71,8 +72,14 @@ void simpleTH1Mean(const char *spectFN, const char *hName,
   }
 
   //The means on x and y
-  float meanX;
-  // meanX=cutSpect->GetMean(1); //The old way
+  float meanX,stdDevX;
+  meanX=cutSpect->GetMean(1); //The old way
+  stdDevX=cutSpect->GetStdDev(1);
+
+  if (hMeanB){
+    printf("%0.3f\t%0.3f\t%0.3f\n",meanX,stdDevX,0.0);
+    return;
+  }
 
   //Fitting a gaussian
   //Q means quiet, 0 means don't do a plot

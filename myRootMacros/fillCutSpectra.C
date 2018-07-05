@@ -15,14 +15,14 @@
 
 void fillCutSpectra(const char *cutFN, const char *spectFN,
                     const char *cutName, const char *hName,
+		    bool hMeanB=false,
                     bool myBoolX=false,
                     float minXR=0, float maxXR=1024,
                     bool myBoolY=false,
                     float minYR=0, float maxYR=1024,
 		    bool saveBool=false,
 		    const char *saveFile="cutH.root",
-		    const char *cutHistName="hCuttedHisto",
-		    bool hMeanB=false) {
+		    const char *cutHistName="hCuttedHisto") {
 
   TFile *myCuts = new TFile(cutFN,"update");
   TCutG *cut=(TCutG *)myCuts->Get(cutName);
@@ -109,10 +109,13 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   }
 
   //The means on x and y
-  float meanX,meanY;
+  float meanX,meanY,stdDevX,stdDevY;
   //Old way of doing it
   meanX=cutSpect->GetMean(1);
+  stdDevX=cutSpect->GetStdDev(1);
+
   meanY=cutSpect->GetMean(2);
+  stdDevY=cutSpect->GetStdDev(2);
 
   //Avoiding errors
   if (meanX == 0 && meanY == 0){
@@ -121,7 +124,7 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   }
 
   if (hMeanB){
-    printf("%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\n",meanX,meanY,0.0,0.0,0.0,0.0);
+    printf("%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\n",meanX,meanY,stdDevX,0.0,stdDevY,0.0);
     return;
   }
   //Old way of doing it

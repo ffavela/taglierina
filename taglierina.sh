@@ -6,6 +6,7 @@ if [ ! $myWhich = "./taglierina.sh" ]
 then
     #Symlink way
     linkLoc=$(readlink $myWhich)
+    myDir="$(dirname $linkLoc)/"
     macrosDir="$(dirname $linkLoc)/$macrosDir"
 fi
 
@@ -91,12 +92,13 @@ function printHelp {
 	  echo -e "\t$(basename $0) -d tNumOrName rootCutFile"
     echo -e "\t$(basename $0) -l rootFile [rootObject]"
     echo -e "\t$(basename $0) --lCut rootCutFile"
-    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]]"
-    echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile\n"
+    echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]] [--hMean]"
+    echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile"
+    echo -e "\t$(basename $0) --ascii\n"
     [ "$1" != "extra" ] && return
 
     longExtraStr="\
-  This program ($(basename $0)) is for making cuts on 2D histograms\n\
+  This program ($(basename $0)) is for making cuts on 2D (and 1D) histograms\n\
 and for facilitating the calibration process. Note that some of the\n\
 options are intended for specific telescopes of CHIMERA. Most of\n\
 the options need an existing spectraFile and a rootCutFile that\n\
@@ -113,13 +115,15 @@ numbers are used, a configuration file is required.\n\n\
  -l will list the contents of a root file, if rootObject is used then\n\
  it will only output those objects.\n\
  --lCut will list the telescope numbers that have cuts.\n
- -b will output the centroid of the histograms inside each of the cuts\n\
- inside rootCutFile. If -n is used, then it will do it just for the\n\
- specific corresponding cut. If -p is used then for every cut it will\n\
- create a partition on the y axis by default. If --axis option is used\n\
- then you can explicitly choose either x or y axis.\n\
+ -b will output the centroid of a fitted gaussian to the histograms inside\n\
+each of the cuts inside rootCutFile. If -n is used, then it will do it\n\
+just for the specific corresponding cut. If -p is used then for every cut\n\
+it will create a partition on the y axis by default. If --axis option is used\n\
+then you can explicitly choose either x or y axis. If --hMean flag\n\
+is used, then it will print the histogram mean and the stdDev.\n\
 --TH will update an outFile with TH histograms from spectraFile that\n\
 satisfy the cuts inside rootCutFile.\n
+--ascii --8<--\n\
 "
     echo -e $longExtraStr
 
@@ -418,6 +422,8 @@ function getMeanPartData {
 
     pVar=$5
 
+    hMeanBool=$6
+
     #remember maxMinVar are 2 values
     maxMinVar=$(getMaxAndMin $nVar $rootCutFile $axVar)
     maxVar=$(echo -e "$maxMinVar" | cut -d' ' -f1)
@@ -436,7 +442,7 @@ function getMeanPartData {
                                        # $nVar $axVar $locMin $locMax)
 
 	impVar=($(getMeanChansPartition $rootCutFile $spectraFile\
-                                       $nVar $axVar $locMin $locMax))
+                                       $nVar $axVar $locMin $locMax $hMeanBool))
 
         let mRIdxMin=mRIdx-1
         # hInfo=$(echo $impVar | cut -d' ' -f1 )".$mRIdxMin"
@@ -490,6 +496,7 @@ function getMeanChans {
     else
         strHVar=$histVar
     fi
+    hMeanBool="$4"
     cutHStrVar=$strHVar"CUT"
     echo -ne "$histVar\t"
     # number and then ommiting new line so it will continue to be filled by root
@@ -497,13 +504,13 @@ function getMeanChans {
     if [[ "$myGreatV"  =~ "TH2" ]]
     then
 	# The next will print meanX, meanY
-	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\"\) | tail -1
+	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\",${hMeanBool}\) | tail -1
     elif [[ "$myGreatV" =~ "TH1" ]]
     then
 	maxMinVar=($(getMaxAndMin $strHVar $rootCutFile "x"))
 	maxX=${maxMinVar[0]}
 	minX=${maxMinVar[1]}
-	root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${strHVar}\",$minX,$maxX\) | tail -1
+	root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${strHVar}\",$minX,$maxX,$hMeanBool\) | tail -1
     else
 	echo "unsuported type"
     fi
@@ -525,6 +532,8 @@ function getMeanChansPartition {
     axisVar="$4"
     axisMin="$5"
     axisMax="$6"
+
+    hMeanBool="$7"
 
     intBool=$(checkIfInt $histVar)
     if [ "$intBool" = "true" ]
@@ -551,7 +560,7 @@ function getMeanChansPartition {
     if [[ "$myGreatV"  =~ "TH2" ]]
     then
 	# The next will print meanX, meanY
-	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\",$boolX,$xMin,$xMax,$boolY,$yMin,$yMax\) | tail -1
+	root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${cutHStrVar}\",\"${strHVar}\",$hMeanBool,$boolX,$xMin,$xMax,$boolY,$yMin,$yMax\) | tail -1
     elif [[ "$myGreatV" =~ "TH1" ]]
     then
 	# maxMinVar=($(getMaxAndMin $strHVar $rootCutFile "x"))
@@ -710,7 +719,7 @@ function checkOpt {
         echo -e "#histogram\tmeanX\t[meanY]\tsigmaX\tcteX\t[sigmaY\tcteY]"
 
         hMeanBool=$(findOptVar "--hMean" "$@")
-        [ "$hMeanBool" = "true" ] && echo "DOING THE OLD H-MEAN"
+        # [ "$hMeanBool" = "true" ] && echo "DOING THE OLD H-MEAN"
 
         nVar=""
         nBool=$(findOptVar "-n" "$@")
@@ -781,9 +790,9 @@ function checkOpt {
 
             if [ ! "$pVar" = "" ]
             then
-                getMeanPartData $rootCutFile $spectraFile $nVar $axVar $pVar
+                getMeanPartData $rootCutFile $spectraFile $nVar $axVar $pVar $hMeanBool
             else
-                getMeanChans $rootCutFile $spectraFile $nVar
+                getMeanChans $rootCutFile $spectraFile $nVar $hMeanBool
             fi
 	          exit 0
 	      fi
@@ -795,9 +804,9 @@ function checkOpt {
             e=$(basename $ee CUT)
             if [ ! "$pVar" = "" ]
             then
-                getMeanPartData $rootCutFile $spectraFile $e $axVar $pVar
+                getMeanPartData $rootCutFile $spectraFile $e $axVar $pVar $hMeanBool
             else
-                getMeanChans $rootCutFile $spectraFile $e
+                getMeanChans $rootCutFile $spectraFile $e $hMeanBool
             fi
             #Putting 2 spaces for easier analysis with plotting groups
             #with gnuplot
@@ -810,6 +819,9 @@ function checkOpt {
 	shift
 	checkTypErr4 $@
 	createTHFile $@
+    elif [ "$1" = "--ascii" ]
+    then
+	cat $myDir/asciiLogo.ascii
     else
 	echo "error: \"$1\" unkown option" >&2
     fi
@@ -836,13 +848,13 @@ function createTHFile {
 	if [[ "$myGreatV"  =~ "TH2" ]]
 	then
 	    # The next will save the cut histo in a file
-	    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${hCV}\",\"${hVBase}\","false",0,1024,"false",0,1024,"true",\"$outFile\",\"$hV\"\) > /dev/null
+	    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${hCV}\",\"${hVBase}\","false","false",0,1024,"false",0,1024,"true",\"$outFile\",\"$hV\"\) > /dev/null
 	elif [[ "$myGreatV" =~ "TH1" ]]
 	then
 	    maxMinVar=($(getMaxAndMin $hVBase $rootCutFile "x"))
 	    maxX=${maxMinVar[0]}
 	    minX=${maxMinVar[1]}
-	    root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${hVBase}\",$minX,$maxX,"true",\"$outFile\",\"$hV\"\) | tail -1
+	    root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${hVBase}\",$minX,$maxX,"false","true",\"$outFile\",\"$hV\"\) | tail -1
 	else
 	    echo "unsuported type"
 	fi
