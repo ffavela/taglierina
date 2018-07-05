@@ -21,7 +21,8 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
                     float minYR=0, float maxYR=1024,
 		    bool saveBool=false,
 		    const char *saveFile="cutH.root",
-		    const char *cutHistName="hCuttedHisto") {
+		    const char *cutHistName="hCuttedHisto",
+		    bool hMeanB=false) {
 
   TFile *myCuts = new TFile(cutFN,"update");
   TCutG *cut=(TCutG *)myCuts->Get(cutName);
@@ -119,6 +120,10 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
     return;
   }
 
+  if (hMeanB){
+    printf("%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\n",meanX,meanY,0.0,0.0,0.0,0.0);
+    return;
+  }
   //Old way of doing it
   // if (meanX == 0 && meanY == 0)
   //   printf("None\tNone\n");
@@ -129,9 +134,9 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   TH1D *myProX=(TH1D *)cutSpect->ProjectionX();
   myProX->Fit("gaus","Q0");
   TF1 *fitX = myProX->GetFunction("gaus");
-  Double_t p0X=fitX->GetParameter(0);
-  Double_t p1X=fitX->GetParameter(1);
-  Double_t p2X=fitX->GetParameter(2);
+  Double_t p0X=fitX->GetParameter(0);//the constant
+  Double_t p1X=fitX->GetParameter(1);//the mean
+  Double_t p2X=fitX->GetParameter(2);//the sigma
 
   TH1D *myProY=(TH1D *)cutSpect->ProjectionY();
   myProY->Fit("gaus","Q0");
@@ -140,11 +145,5 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   Double_t p1Y=fitY->GetParameter(1);
   Double_t p2Y=fitY->GetParameter(2);
 
-  //Old way of doing it
-  // if (meanX == 0 && meanY == 0)
-  //   printf("None\tNone\n");
-  // else
-  //   printf("%0.4f\t%0.4f\n",meanX,meanY);
-
-  printf("%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\n",p1X,p2X,p0X,p1Y,p2Y,p0Y);
+  printf("%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\t%0.4f\n",p1X,p1Y,p2X,p0X,p2Y,p0Y);
 }

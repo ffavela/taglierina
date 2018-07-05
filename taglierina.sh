@@ -707,7 +707,10 @@ function checkOpt {
 	      # checkIfConfFile && source $confFile
 	      # [ ! -f "$rootCutFile" ] || [ ! -f "$spectraFile" ] &&\
         #     echo "error: both files have to exist">&2 && exit 888
-        echo -e "#hist\tmeanX\tsigmaX\tcteX\t[meanX\tsigmaX\tcteX]"
+        echo -e "#histogram\tmeanX\t[meanY]\tsigmaX\tcteX\t[sigmaY\tcteY]"
+
+        hMeanBool=$(findOptVar "--hMean" "$@")
+        [ "$hMeanBool" = "true" ] && echo "DOING THE OLD H-MEAN"
 
         nVar=""
         nBool=$(findOptVar "-n" "$@")
