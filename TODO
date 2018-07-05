@@ -1,11 +1,6 @@
 
 - Improve documentation.
 
-- Only use the configuration file if the -t option is required...?
-
-- Implement options while on the cut, not just x (such as typing d for
- deleting a cut or b for going backward (if going through a loop)).
-
 - While looping throught the telescopes add a way to start from a
   certain value. (do a while in the file reading or something).
 
@@ -15,4 +10,8 @@
 - Have a way to output cut histograms in a file not just the cut file
   or the mean etc.
 
-- A way to put normal cuts? (not just graphical ones...).
+- Include a signoid fitting (for punch through):
+
+f(x)=b*(1-1/(1+exp(-a*(x-c))))
+
+We are interested in the c parameter.
