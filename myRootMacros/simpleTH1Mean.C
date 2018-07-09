@@ -25,7 +25,10 @@ void simpleTH1Mean(const char *spectFN, const char *hName,
   int maxXVal=myH1Stuff->GetXaxis()->GetBinCenter(nbinsx);
   int minXVal=myH1Stuff->GetXaxis()->GetBinCenter(0);
 
-  TH1F *cutSpect = new TH1F("myAwesomeName","ciao",nbinsx,minXVal,maxXVal);
+  //Cloning the histo
+  TH1F *cutSpect = (TH1F *) myH1Stuff->Clone();
+  //Zeroing it
+  cutSpect->Add(cutSpect,-1);
 
   float xCenter;
   int xBinNum;

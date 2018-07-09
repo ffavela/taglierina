@@ -56,7 +56,11 @@ void fillCutSpectra(const char *cutFN, const char *spectFN,
   }
 
   minXR=0;
-  TH2F *cutSpect = new TH2F("myAwesomeName","ciao",nbinsx,minXVal,maxXVal,nbinsy,minYVal,maxYVal);
+
+  //Cloning the histo
+  TH2F *cutSpect = (TH2F *) myH2Stuff->Clone();
+  //Zeroing it
+  cutSpect->Add(cutSpect,-1);
 
   float xCenter, yCenter;
   int xBinNum,yBinNum;

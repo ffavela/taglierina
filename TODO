@@ -10,8 +10,10 @@
 - Have a way to output cut histograms in a file not just the cut file
   or the mean etc.
 
-- Include a signoid fitting (for punch through):
+- Include a sigmoid fitting (for punch through):
 
-f(x)=b*(1-1/(1+exp(-a*(x-c))))
+f(x)=c*(1-1/(1+exp(-b*(x-a))))
 
-We are interested in the c parameter.
+We are interested in the a parameter.
+
+- Fix the binning of the cutted histograms. (Done I think)
