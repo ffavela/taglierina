@@ -9,6 +9,7 @@
 //analisys)
 
 Double_t sigmaFun(Double_t *x, Double_t *params){
+  //Exp is from TMath
   return params[2]*(1-1/(1-Exp(-params[1]*(x[0]-params[0]))));
 }
 
@@ -27,7 +28,11 @@ void sigmaFitter(TH1F *myHToFit, Double_t minVal,
   // TF1 *fit = myHToFit->GetFunction("gaus");
 
   // func->SetParameters[];
-  
+  //My initial guesses
+  params[0]=myHToFit->GetMean();//"inflexion"
+  params[1]=-(myHToFit->GetMaximum()-0.0)/divideOrSomething!!;//"skin"
+  params[2]=myHToFit->GetMaximum();//"initial cte"
+
   fit->SetParameters(params);
   Double_t p0 = fit->GetParameter(0);
   Double_t p1 = fit->GetParameter(1);
