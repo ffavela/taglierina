@@ -594,7 +594,7 @@ function checkOpt {
 	echo "maxX=$maxX"
 	echo "minX=$minX"
 
-	root -l -q $macrosDir/simpleTH1Mean.C\(\"MySpectra212.root\",\"h10745\",$minX,$maxX\) | tail -1
+	# root -l -q $macrosDir/simpleTH1Mean.C\(\"MySpectra212.root\",\"h10745\",$minX,$maxX\) | tail -1
 
 	exit 8990
     elif [ "$1" = "-n" ]
