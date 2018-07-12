@@ -691,7 +691,6 @@ function checkOpt {
 	exit 8990
     elif [ "$1" = "-n" ]
     then
-        echo "entered new cond"
         shift
         tNumOrName="$1"
         spectraFile="$2"
@@ -728,6 +727,8 @@ function checkOpt {
         sTNum="$1"
         intBool=$(checkIfInt $sTNum)
         [ "$intBool" = "false" ] && intError sTNum
+	#Here you must also check if the corresponding telescope has
+	#an histogram in the file
 
         eTNum=$maxTeles
         [ "$2" = "-e" ] && eTNum="$3" &&\
