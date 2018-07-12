@@ -35,44 +35,56 @@ function getPTVal0 {
     spectraFile="$1"
     [ ! -f "$spectraFile" ] &&\
         existFileErr cuttedSpectraFile $spectraFile
-    echo "Doing fantastic stuff here"
+    axis=$(getAxisOrFalse $@)
+    [ "$axis" = "false" ]  &&\
+	echo "error: axis is invalid" >&2 &&\
+	exit 6567
+
     nVar=""
     nBool=$(findOptVar "-n" "$@")
     if [ "$nBool" = "true" ]
     then
 	nVar=$(getOptVar "-n" "$@")
 	probeVal=$(bashProbeObj $spectraFile $nVar)
-	[ $probeVal = "None" ] &&\
-	    echo "histo $nVar not found">&2 && exit 783
-	myHLet="${probeVal:1:1}"
-	[ ! "$myHLet" = "H" ] &&\
-	    echo "error $nVar is not an histogram" >&2 &&\
-	    exit 783
-	echo myHLet=$myHLet
-	douVal="${probeVal:2:1}"
-
-	axis="x"
-	if [ "$douVal" = "1" ] || [ "$douVal" = "2" ]
-	then
-	    echo "Calling the function"
-	    root -l -q $macrosDir/printPTParams.C\(\"$spectraFile\",\"$nVar\",$douVal,\"$axis\"\) | tail -1
-	else
-	    echo "Don't know what I'm doing"
-	    exit 79797
-	fi
-	echo douVal=$douVal
-	exit 777
+	getPTVal0Base $nVar $probeVal $axis $@
+	exit 0
     fi
 
-    #This part should be done carefully afterwards
-    hList=$(listRootObjs "$1" "TH")
-    for hVal in ${hList[*]}
+    echo -e "#hitogramName\tPTVal"
+    listRootTHs $spectraFile | while read myStr;
     do
-	echo hVal=$hVal
-	break
+    	nVar=$(echo "$myStr" | cut -f2)
+    	probeVal=$(echo "$myStr" | cut -f1)
+	echo -ne "$nVar\t"
+    	getPTVal0Base $nVar $probeVal $axis $@
     done
 }
 
+function getPTVal0Base {
+    nVar=$1
+    probeVal=$2
+    axis=$3
+    shift 3
+
+    [ $probeVal = "None" ] &&\
+	echo "histo $nVar not found">&2 && exit 783
+    myHLet="${probeVal:1:1}"
+	[ ! "$myHLet" = "H" ] &&\
+	    echo "error $nVar is not an histogram" >&2 &&\
+	    exit 783
+    douVal="${probeVal:2:1}"
+
+    [ "$douVal" = "1" ] && [ "$axis" = "y" ] &&\
+	echo -e "${red}warning:${NC} y axis is invalid for 1D histograms using x axis" >&2
+
+    if [ "$douVal" = "1" ] || [ "$douVal" = "2" ]
+    then
+	root -l -q $macrosDir/printPTParams.C\(\"$spectraFile\",\"$nVar\",$douVal,\"$axis\"\) | tail -1
+    else
+	echo "Don't know what I'm doing" >&2
+	exit 79797
+    fi
+}
 #Checks if a cut was defined, exits in case it wasn't
 function checkCut {
     echo "$1" | grep "The cut was not defined" > /dev/null
@@ -136,7 +148,7 @@ function printHelp {
     echo -e "\t$(basename $0) --lCut rootCutFile"
     echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]] [--hMean]"
     echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile"
-    echo -e "\t$(basename $0) --PT0 cuttedSpectraFile [-n hName] [--axis (x|y)]"
+    echo -e "\t$(basename $0) --PT0 ${red}cutted${NC}SpectraFile [-n hName] [--axis (x|y)]"
     echo -e "\t$(basename $0) --ascii\n"
     [ "$1" != "extra" ] && return
 
@@ -278,6 +290,25 @@ function findOptVar {
         shift
     done
     echo "false"
+}
+
+function getAxisOrFalse {
+    axis="x"
+    axBool=$(findOptVar "--axis" "$@")
+    if [ "$axBool" = "true" ]
+    then
+	axVar=$(getOptVar "--axis" "$@")
+	if [ "$axVar" = "x" ] || [ "$axVar" = "X" ]
+	then
+	    axis="x"
+	elif [ "$axVar" = "y" ] || [ "$axVar" = "Y" ]
+	then
+	    axis="y"
+	else
+	    axis="false"
+	fi
+    fi
+    echo "$axis"
 }
 
 function checkIfConfFile {
@@ -521,13 +552,22 @@ function listRootObjs {
 
     if [ "$2" = "" ]
     then
-	      root -l -q $macrosDir/listRoot.C\(\"${1}\"\)
+	root -l -q $macrosDir/listRoot.C\(\"${1}\"\)
     else
-	      rootObj="KEY: $2"
-	      root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "$rootObj" |\
+	rootObj="KEY: $2"
+	root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "$rootObj" |\
             cut -f2 | cut -d";" -f1
     fi
 }
+
+function listRootTHs {
+    myFile=$1
+    rootObj="KEY: $2"
+    root -l -q $macrosDir/listRoot.C\(\"${1}\"\) | grep "TH"|\
+        cut -f1,2 | cut -d":" -f2 |\
+	cut -d";" -f1 | tr -d " "
+}
+
 
 function getMeanChans {
     rootCutFile="$1"
@@ -638,6 +678,7 @@ function checkOpt {
     then
 	echo "Using the testing option"
 
+
 	# echo "using the getMaxAndMin function"
 	# maxMinVar=($(getMaxAndMin "h10745" "my1DCuts.cut" "x"))
 	# maxX=${maxMinVar[0]}
@@ -646,7 +687,7 @@ function checkOpt {
 	# echo "minX=$minX"
 
 	# root -l -q $macrosDir/simpleTH1Mean.C\(\"MySpectra212.root\",\"h10745\",$minX,$maxX\) | tail -1
-
+	listRootTHs $2
 	exit 8990
     elif [ "$1" = "-n" ]
     then
@@ -872,7 +913,6 @@ function checkOpt {
 	createTHFile $@
     elif [ "$1" = "--PT0" ]
     then
-	echo "Using the punch through option"
 	shift
 	getPTVal0 $@
 	exit 892
