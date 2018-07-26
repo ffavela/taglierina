@@ -149,6 +149,7 @@ function printHelp {
     echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]] [--hMean]"
     echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile"
     echo -e "\t$(basename $0) --PT0 ${red}cutted${NC}SpectraFile [-n hName] [--axis (x|y)]"
+    echo -e "\t$(basename $0) --draw (-n|-s) tNumOrName ${red}cutted${NC}SpectraFiles ... [--fit gauss]"
     echo -e "\t$(basename $0) --ascii\n"
     [ "$1" != "extra" ] && return
 
@@ -180,6 +181,7 @@ is used, then it will print the histogram mean and the stdDev.\n\
 satisfy the cuts inside rootCutFile.\n\
 --PT0  will make an attempt to give a punch through value.\n\
 By default the used axis will be x. ${red}Make sure the file is already cutted.${NC}\n\
+--draw will simply draw the histograms corresponding to tNumOrName.\n\
 --ascii --8<--\n\
 "
     echo -e $longExtraStr
@@ -917,6 +919,31 @@ function checkOpt {
 	shift
 	getPTVal0 $@
 	exit 892
+    elif [ "$1" = "--draw" ]
+    then
+	echo "entered the draw option"
+	[ ! "$2" =  "-n" ] && echo "error: need -n option" && exit 783
+	[ "$3" =  "" ]  && echo "error: need a number or valid histogram name" && exit 785
+	tNumOrName="$3"
+	intBool=$(checkIfInt $tNumOrName)
+	echo "intBool = $intBool"
+	shift 3
+	[ "$1" = "" ] && echo "error: at least one root file has to be given" && exit 788
+	# echo "$1"
+	array=( "$@" )
+	arraylength=${#array[@]}
+	echo arraylength = $arraylength
+	for (( i=1; i<${arraylength}+1; i++ ));
+	do
+	    echo "checking if valid root file ${array[$i-1]}"
+	    [ ! -f "${array[$i-1]}" ] &&\
+		existFileErr spectraFile "${array[$i-1]}"
+	done
+	wholeArr=$(echo ${array[@]} | tr ' ' ',')
+	echo the whole array is $wholeArr
+	echo calling the root macro
+	root -l -q $macrosDir/multiDraw.C\(\"$tNumOrName\",\"$wholeArr\"\)
+	# root -l -q $macrosDir/multiDraw.C\(\"$wholeArr\"\)
     elif [ "$1" = "--ascii" ]
     then
 	cat $myDir/asciiLogo.ascii
