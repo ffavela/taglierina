@@ -5,147 +5,101 @@
 #include "TObject.h"
 #include "string.h"
 
-// char *myStrSplit(const char *myStr, const char *myDelim, int instNum=0)
-// {
+using namespace std;
 
-//     char* token_pointer;
-//     token_pointer = strtok(myStr, myDelim);
-//    // return token_pointer;
-//     while(NULL != token_pointer)
-//     {
-//         printf("%s \n", token_pointer);
-//         token_pointer = strtok(NULL, myDelim);    
-//     }
+vector<string> mySplit(string str, string token){
+    vector<string>result;
+    while(str.size()){
+        int index = str.find(token);
+        if(index!=string::npos){
+	  result.push_back(str.substr(0,index));
+	  str = str.substr(index+token.size());
+	  if(str.size()==0)
+	    result.push_back(str);
+        }else{
+            result.push_back(str);
+            str = "";
+        }
+    }
+    return result;
+}
 
-//     return 0;
-// }
-
-char *myStrSplit(const char *myStr, const char *myDelim, int instNum=0)
+void myPrint( vector <string> & v )
 {
-    char* token_pointer=NULL;
-    token_pointer = strtok(myStr, myDelim);
-    // while(instNum >= 0 )
-    while(NULL != token_pointer)
-    {
-      printf("myStrSplit instNum = %d\n",instNum);
-      printf("%s \n", token_pointer);
-      instNum -= 1;
-      token_pointer = strtok(NULL, myDelim);    
-    }
-    return token_pointer;
+  for (size_t n = 0; n < v.size(); n++)
+    cout << "\"" << v[ n ] << "\"\n";
+  cout << endl;
 }
 
-int countInstances(const char *myStr,const char *myDelim) {
-  int count=0;
-  char* token_pointer=NULL;
-  token_pointer = strtok(myStr, myDelim);
-  while(NULL != token_pointer)
-    {
-      count+=1;
-      //handle your token
-      token_pointer = strtok(NULL, myDelim);    
-    }
-  return count;
-}
-
-void multiDraw(const char *hName, const char *spectFNames) {
+void multiDraw(const char *hName, std::string spectFNames) {
   printf("Hello fantastic amazing world\n");
   printf("hName = %s\n",hName);
-  printf("specFN = %s\n",spectFNames);
-  // std::vector<std::string> myTokens=split(spectFN,",");
+  cout<<spectFNames<<endl;
 
-  char *myAwesomeChar;
-  char *betterVar=*spectFNames;
-  printf("B4 myCount specFN = %s\n",spectFNames);
-  int myCount=countInstances(spectFNames,",");
-  printf("After myCount specFN = %s\n",spectFNames);
-  
-  myAwesomeChar=myStrSplit(spectFNames,",");
-  // printf("number of instances are %d\n", myCount);
+  std::vector<std::string> myResults=mySplit(spectFNames,",");
+  // cout<<myResults[2]<<endl;
 
-  printf("A simple test print %s\n", myAwesomeChar);
-  // myAwesomeChar=myStrSplit(spectFNames,",",2);
-  // printf("something random");
-  // printf("A simple test print again print something!! %s\n", myAwesomeChar);
-  //  printf("something random again\n");
-  // printf("A simple test print again %s\n", myAwesomeChar[1]);
-  // simpleHello();
+  cout<<"Doing myPrint"<<endl;
+  myPrint(myResults);
+
+  TCanvas *c1 = new TCanvas("c1", "My C1 canvas", 900, 750);
+  c1->ToggleToolBar();
+  c1->ToggleEventStatus();
+
+  myCounter=1;
+  for (size_t n = 0; n < myResults.size(); n++){
+    TFile *f = new TFile(myResults[n].c_str(),"read");
+    TH1F *myH1Stuff=(TH1F *)f->Get(hName);
+    // TColor *myColor = gROOT->GetColor(10);
+    cout<<kGreen<<endl;
+    myH1Stuff->SetLineColor(myCounter);
+    myCounter+=1;
+    myCounter%=50;
+    if (myH1Stuff == 0){
+      printf("Error: histogram does not exist\n");
+      return;
+    }
+    myH1Stuff->Draw("same");
+    cout << "\"" << myResults[ n ] << "\"\n";
+  }
+
+  const char *input;
+  TTimer *timer = new TTimer("gSystem->ProcessEvents();", 50, kFALSE);
+  Bool_t done = kFALSE;
+  do {
+    timer->TurnOn();
+    timer->Reset();
+    // Now let's read the input, we can use here any
+    // stdio or iostream reading methods. like std::cin >> myinputl;
+
+    printf("Input d for deleting the cut\n");
+    printf("Input b (or p) for going backward (in case of looping)\n");
+    input = Getline("Type <return> after cut was made (x (or q) for exiting): ");
+    timer->TurnOff();
+
+    // Now usefull stuff with the input!
+    // ....
+    // here were are always done as soon as we get some input!
+    //    printf("Stupid stuff\n");
+
+    // cout<< "sizeof(input)" <<  sizeof(input)<<endl;
+    if (input[0] == 'x' || input[0] == 'q'){
+      write2File("exit");
+      return 666;
+    } else if (input[0] == 'd'){
+      printf("Deleting the cut & redrawing\n");
+      write2File("delete cut");
+      return 667;
+    } else if (input[0] == 'b' || input[0] == 'p'){
+      printf("Going backward\n");
+      write2File("back");
+      return 668;
+    }
+
+    if (input) done = kTRUE;
+  } while (!done);
+
+
+  return;
+
 }
-  // TFile *fHistos = new TFile(spectFN,"update");
-
-  // TH1F *myH1Stuff=(TH1F *)fHistos->Get(hName);
-
-  // int nbinsx = myH1Stuff->GetXaxis()->GetNbins();
-  // int maxXVal=myH1Stuff->GetXaxis()->GetBinCenter(nbinsx);
-  // int minXVal=myH1Stuff->GetXaxis()->GetBinCenter(0);
-
-  // //Cloning the histo
-  // TH1F *cutSpect = (TH1F *) myH1Stuff->Clone();
-  // //Zeroing it
-  // cutSpect->Add(cutSpect,-1);
-
-  // float xCenter;
-  // int xBinNum;
-
-  // int iCont=myH1Stuff->GetBinContent(xCenter);
-  // int iContCut=0;
-  // // fHistos->Close();
-  // for (xBinNum=0;xBinNum < nbinsx;xBinNum++){
-  //   xCenter=myH1Stuff->GetXaxis()->GetBinCenter(xBinNum);
-  //   iCont=myH1Stuff->GetBinContent(xBinNum);
-
-  //   if( minValCut <= xCenter && xCenter < maxValCut && iCont > 0){
-  //     cutSpect->Fill(xCenter,iCont);
-  //     iContCut=cutSpect->GetBinContent(xBinNum);
-  //     if (iContCut != iCont){
-  //       printf("This should never happen!\n");
-  //       printf("iContCut = %d != iCont = %d\n",iContCut, iCont);
-  //     }
-  //   }
-  // }
-  // // TCanvas *c2 = new TCanvas("c2","c2");
-  // // c2->ToggleEventStatus();
-  // // cutSpect->Draw();
-  // // cut->Draw("same");
-
-  // //Put the saveBool condition here!!
-  // if (saveBool==true){
-  //   TFile *fOut = new TFile(saveFile,"update");
-
-  //   TH2F *oldHisto=(TH2F *)fOut->Get(cutHistName);
-  //   if (oldHisto == 0){
-  //     printf("The spectra did not previosuly exist, creating it.\n");
-  //   } else {
-  //     printf("Rewriting histo\n");
-  //     //Horrible way of deleting the old histo
-  //     const char inCutHName[50];
-  //     sprintf(inCutHName,"%s;1",cutHistName);
-  //     fOut->Delete(inCutHName);
-  //   }
-  //   cutSpect->SetName(cutHistName);
-  //   cutSpect->Write();
-
-  //   return;
-  // }
-
-  // //The means on x and y
-  // float meanX,stdDevX;
-  // meanX=cutSpect->GetMean(1); //The old way
-  // stdDevX=cutSpect->GetStdDev(1);
-
-  // if (hMeanB){
-  //   printf("%0.3f\t%0.3f\t%0.3f\n",meanX,stdDevX,0.0);
-  //   return;
-  // }
-
-  // //Fitting a gaussian
-  // //Q means quiet, 0 means don't do a plot
-  // cutSpect->Fit("gaus","Q0");
-  // TF1 *fit = cutSpect->GetFunction("gaus");
-  // Double_t p0 = fit->GetParameter(0);//Constant
-  // Double_t p1 = fit->GetParameter(1);//Mean
-  // Double_t p2 = fit->GetParameter(2);//Sigma
-
-  // // printf("%0.3f\n",meanX);
-  // printf("%0.3f\t%0.3f\t%0.3f\n",p1,p2,p0);
-// }
