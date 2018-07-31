@@ -49,7 +49,7 @@ void multiDraw(const char *hName, std::string spectFNames) {
   int myCounter=1;
   for (size_t n = 0; n < myResults.size(); n++){
     TFile *f = new TFile(myResults[n].c_str(),"read");
-    TH2F *myHStuff=(TH2F *)f->Get(hName);
+    TH1F *myHStuff=(TH1F *)f->Get(hName);
     if (myHStuff == 0){
       printf("Error: histogram does not exist\n");
       return;
