@@ -149,7 +149,7 @@ function printHelp {
     echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]] [--hMean]"
     echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile"
     echo -e "\t$(basename $0) --PT0 ${red}cutted${NC}SpectraFile [-n hName] [--axis (x|y)]"
-    echo -e "\t$(basename $0) --draw (-n|-s) tNumOrName ${red}cutted${NC}SpectraFiles ... [--fit gauss]"
+    echo -e "\t$(basename $0) --draw (-n|-s) tNumOrName ${red}cutted${NC}SpectraFiles ..."
     echo -e "\t$(basename $0) --ascii\n"
     [ "$1" != "extra" ] && return
 
@@ -379,6 +379,46 @@ function checkArgNum {
     exit 1
 }
 
+function doThePlot {
+    magicS="(int)666"
+    value=$1
+    if [ $value = "-n" ]
+    then
+        echo "name option is used" >&2
+        shift
+        histoVar=$1
+    else
+	      let histoNum=$myShift+$value
+	      histoVar=$myPrefix$histoNum
+    fi
+    spectraFiles="$2"
+
+    echo -e "${red}Press enter to continue${NC}" >&2
+
+    runDraw="true"
+    while [ "$runDraw" = "true" ]
+    do
+	runDraw="false"
+	root -l -q $macrosDir/multiDraw.C\(\"$histoVar\",\"$spectraFiles\"\)
+	if [ -e $specialLogF ]
+	then
+	    echo "specialLogF contents are" >&2
+	    cat $specialLogF
+	    grep -s "exit" $specialLogF >/dev/null &&\
+		echo "was ordered to exit" >&2&&\
+		rm $specialLogF && exit 666
+
+	    grep -s "back" $specialLogF >/dev/null &&\
+		echo "was ordered to go backward">&2 &&\
+		echo "going back">&2 && runDraw="true" && rm $specialLogF && return 1
+
+	    rm $specialLogF
+	fi
+	echo ""
+    done
+}
+
+
 function doTheCut {
     magicS="(int)666"
     value=$1
@@ -490,6 +530,73 @@ function doAllCuts {
 	      let myIdx=$myIdx+1
     done
 }
+
+function doAllPlots {
+    if [ "$1" = "-na" ]
+    then
+	      echo "Looping through named histograms"
+        optionalVar="-n"
+	      shift
+    fi
+    #For the eventual array
+    myIdx=0
+
+    if [ "$1" = "-sE" ] #Start and end opt
+    then
+	      echo "Looping through command line range"
+        checkIfConfFile && source $confFile
+        sTNum=$2
+        eTNum=$3
+        tArr=($(seq 0 $eTNum))
+        myIdx=$sTNum
+	      shift 2 #See comment below for why it is not 3
+    else
+        goodTelFile=$1
+        # readarray tArr < $goodTelFile
+        while read line
+        do
+            #Ignoring lines with "#"
+            echo "Current line $line" >&2
+            echo "$line" | grep "#" && continue
+            tArr+=("$line")
+        done < $goodTelFile
+    fi
+    #In either case it will take starting from second position
+    spectraFiles=$2
+    arrSize=${#tArr[*]}
+    echo "arrSize = $arrSize"
+
+    # for value in ${tArr[*]}
+    while [ $myIdx -lt $arrSize ]
+    do
+        opnionalVar=""
+        echo -e "${red}myIdx = $myIdx ${NC}"
+
+        [ $myIdx -le 0 ] && myIdx=0
+	      value=${tArr[$myIdx]}
+	      #Sometimes the last val is "". Make sure you dont leave empty
+	      #lines in between or it will exit inmediately.
+	      [ "$value" = "" ] && exit 0
+	      echo "Value - $value"
+        intBool=$(checkIfInt $value)
+
+        if [ "$intBool" = "false" ]
+        then
+            echo "it's a named histo">&2
+            optionalVar="-n"
+        else
+            echo "it's an int">&2
+            checkIfConfFile && source $confFile
+            optionalVar=""
+            echo "optionalVar=$optionalVar" >&2
+        fi
+
+	      doThePlot $optionalVar $value "$spectraFiles" ||\
+            let myIdx=$myIdx-2
+	      let myIdx=$myIdx+1
+    done
+}
+
 
 function getMeanPartData {
     rootCutFile=$1
@@ -922,7 +1029,8 @@ function checkOpt {
     elif [ "$1" = "--draw" ]
     then
 	echo "entered the draw option"
-	[ ! "$2" =  "-n" ] && echo "error: need -n option" && exit 783
+	[ ! "$2" =  "-n" ] && [ ! "$2" =  "-s" ] && echo "error: need -n or -s option" && exit 783
+	sOrN="$2"
 	[ "$3" =  "" ]  && echo "error: need a number or valid histogram name" && exit 785
 	tNumOrName="$3"
 	intBool=$(checkIfInt $tNumOrName)
@@ -942,8 +1050,33 @@ function checkOpt {
 	wholeArr=$(echo ${array[@]} | tr ' ' ',')
 	echo the whole array is $wholeArr
 	echo calling the root macro
-	root -l -q $macrosDir/multiDraw.C\(\"$tNumOrName\",\"$wholeArr\"\)
-	# root -l -q $macrosDir/multiDraw.C\(\"$wholeArr\"\)
+
+	echo Doing it through the new func
+	intBool=$(checkIfInt $tNumOrName)
+
+        if [ "$intBool" = "false" ]
+        then
+            echo "it's a named histo">&2
+            optionalVar="-n"
+        else
+            echo "it's an int">&2
+            checkIfConfFile && source $confFile
+            optionalVar=""
+            echo "optionalVar=$optionalVar" >&2
+        fi
+
+	#Put conditional here if -s option was used and send the right option
+	if [ "$sOrN" = "-n" ]
+	then
+	    doThePlot $optionalVar $tNumOrName "$wholeArr"
+	else
+	    echo "Using the other case"
+	    [ "$intBool" = "false" ] && echo "Unimplemented" >&2 && exit 236
+	    doAllPlots "-sE" $tNumOrName $maxTeles "$wholeArr"
+
+	fi
+
+
     elif [ "$1" = "--ascii" ]
     then
 	cat $myDir/asciiLogo.ascii

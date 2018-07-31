@@ -46,21 +46,27 @@ void multiDraw(const char *hName, std::string spectFNames) {
   c1->ToggleToolBar();
   c1->ToggleEventStatus();
 
-  myCounter=1;
+  int myCounter=1;
   for (size_t n = 0; n < myResults.size(); n++){
     TFile *f = new TFile(myResults[n].c_str(),"read");
-    TH1F *myH1Stuff=(TH1F *)f->Get(hName);
-    // TColor *myColor = gROOT->GetColor(10);
-    cout<<kGreen<<endl;
-    myH1Stuff->SetLineColor(myCounter);
-    myCounter+=1;
-    myCounter%=50;
-    if (myH1Stuff == 0){
+    TH2F *myHStuff=(TH2F *)f->Get(hName);
+    if (myHStuff == 0){
       printf("Error: histogram does not exist\n");
       return;
     }
-    myH1Stuff->Draw("same");
+
+    // TColor *myColor = gROOT->GetColor(10);
+    cout<<kGreen<<endl;
+    myHStuff->SetLineColor(myCounter);
+    if (myCounter==1){
+      cout<<"Hello amazing fantastic marvelous WORLD!"<<endl;
+    }
+
+    myCounter+=1;
+    myCounter%=50;
+    myHStuff->Draw("same");
     cout << "\"" << myResults[ n ] << "\"\n";
+
   }
 
   const char *input;
@@ -96,10 +102,31 @@ void multiDraw(const char *hName, std::string spectFNames) {
       return 668;
     }
 
+        if (input[0] == 'x' || input[0] == 'q'){
+      write2File("exit");
+      return 666;
+    } else if (input[0] == 'd'){
+      printf("Deleting the cut & redrawing\n");
+      write2File("delete cut");
+      return 667;
+    } else if (input[0] == 'b' || input[0] == 'p'){
+      printf("Going backward\n");
+      write2File("back");
+      return 668;
+    }
+
     if (input) done = kTRUE;
   } while (!done);
 
 
   return;
 
+}
+
+void write2File(const char *text,
+		const char *logFileN="specialLogF.txt"){
+  FILE *f4Stat = fopen(logFileN, "w");
+  /* print some text */
+  fprintf(f4Stat, "%s\n", text);
+  return;
 }
