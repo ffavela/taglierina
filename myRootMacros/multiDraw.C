@@ -46,6 +46,26 @@ void multiDraw(const char *hName, std::string spectFNames) {
   c1->ToggleToolBar();
   c1->ToggleEventStatus();
 
+  //Finding the maximum Y for nice displaying
+  Double_t myMax=0;
+  Double_t locMax;
+  for (size_t n = 0; n < myResults.size(); n++){
+    TFile *f = new TFile(myResults[n].c_str(),"read");
+    TH2F *myHStuff=(TH2F *)f->Get(hName);
+    if (myHStuff == 0){
+      printf("Error: histogram does not exist in %s\n",myResults[n].c_str());
+      return;
+    }
+    locMax=myHStuff->GetMaximum();
+    if (locMax > myMax){
+      myMax=locMax;
+      myHStuff->Draw(); //The plot that suvives has the best Y axis ;-)
+      printf("Best file for template up to now is %s\n",myResults[n].c_str());
+    }
+
+  }
+
+  //Now doing the Draw same with the best template
   int myCounter=1;
   for (size_t n = 0; n < myResults.size(); n++){
     TFile *f = new TFile(myResults[n].c_str(),"read");
