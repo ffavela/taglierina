@@ -15,7 +15,7 @@ int myH2Cutter(const char *name,
   Bool_t done = kFALSE;
   char tString[50],temp[50],bName[50];
 
-  TFile *f = new TFile(fileName,"update");
+  TFile *f = new TFile(fileName,"read");
 
   // printf("Hello wonderful world\n");
   // printf("Argument is %s\n",name);
