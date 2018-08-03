@@ -17,7 +17,7 @@ void simpleTH1Mean(const char *spectFN, const char *hName,
 
   printf("Hello fantastic amazing world\n");
 
-  TFile *fHistos = new TFile(spectFN,"update");
+  TFile *fHistos = new TFile(spectFN,"read");
 
   TH1F *myH1Stuff=(TH1F *)fHistos->Get(hName);
 
