@@ -6,7 +6,8 @@
 
 int myH2Cutter(const char *name,
 	       const char *fileName="MySpectra212.root",
-	       const char *myCutFileName="myCutFile.root"){
+	       const char *myCutFileName="myCutFile.root",
+	       const char *colorB="False"){
   const char *input;
 
   const char myCutName[50],innCutName[50];
@@ -32,7 +33,10 @@ int myH2Cutter(const char *name,
   c1->ToggleToolBar();
   c1->ToggleEventStatus();
 
-  myH2Stuff->Draw();
+  if (colorB == "False")
+    myH2Stuff->Draw();
+  else:
+    myH2Stuff->Draw("col");
 
   TFile *myCuts = new TFile(myCutFileName,"update");
   sprintf(myCutName,"%sCUT",name);
@@ -51,6 +55,7 @@ int myH2Cutter(const char *name,
 
     printf("Input d for deleting the cut\n");
     printf("Input b (or p) for going backward (in case of looping)\n");
+    printf("Input c for toggling the color (for 2D histo)\n");
     input = Getline("Type <return> after cut was made (x (or q) for exiting): ");
     timer->TurnOff();
 
@@ -71,7 +76,13 @@ int myH2Cutter(const char *name,
       printf("Going backward\n");
       write2File("back");
       return 668;
+    } else if (input[0] == 'c'){
+      //Still unimplemented
+      printf("Toggling color\n");
+      write2File("color");
+      return 668;
     }
+
 
     if (input) done = kTRUE;
   } while (!done);

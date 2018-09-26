@@ -437,10 +437,11 @@ function doTheCut {
     echo -e "${red}Press enter after selecting the region${NC}" >&2
 
     runDraw="true"
+    myColB="False"
     while [ "$runDraw" = "true" ]
     do
 	runDraw="false"
-	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\"\)
+	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\",\"${myColB}\"\)
 	if [ -e $specialLogF ]
 	then
 	    echo "specialLogF contents are" >&2
@@ -458,10 +459,25 @@ function doTheCut {
 		root -l -q $macrosDir/myCutDeleter.C\(\"${histoVar}\",\"${rootCFile}\"\) &&\
 		echo "redrawing">&2 && runDraw="true"
 
+	    grep -s "color" $specialLogF >/dev/null &&\
+		echo "was ordered to toggle color">&2 &&\
+		myColB=$(toggleString $myColB)
+		echo "redrawing">&2 && runDraw="true"
+
 	    rm $specialLogF
 	fi
 	echo ""
     done
+}
+
+function toggleString {
+    myStr="$1"
+    if [ "$myStr" = "False" ]
+    then
+	echo "True"
+    else
+	echo "False"
+    fi
 }
 
 function doAllCuts {
