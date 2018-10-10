@@ -1027,8 +1027,8 @@ function checkOpt {
                 getMeanChans $rootCutFile $spectraFile $e $hMeanBool
             fi
             #Putting 2 spaces for easier analysis with plotting groups
-            #with gnuplot
-            echo -e "\n"
+            #with gnuplot but only when using partitions
+            [ ! "$pVar" = "" ] && echo -e "\n"
 	      done
 
 	      exit 0
