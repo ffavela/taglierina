@@ -147,7 +147,7 @@ function printHelp {
     echo -e "\t$(basename $0) -l rootFile [rootObject]"
     echo -e "\t$(basename $0) --lCut rootCutFile"
     echo -e "\t$(basename $0) -b spectraFile rootCutFile [-n tNumOrName] [-p partition [--axis (x|y)]] [--hMean]"
-    echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile"
+    echo -e "\t$(basename $0) --TH spectraFile rootCutFile outFile [--yCut]"
     echo -e "\t$(basename $0) --PT0 ${red}cutted${NC}SpectraFile [-n hName] [--axis (x|y)]"
     echo -e "\t$(basename $0) --draw (-n|-s) tNumOrName ${red}cutted${NC}SpectraFiles ..."
     echo -e "\t$(basename $0) --ascii\n"
@@ -178,7 +178,9 @@ it will create a partition on the y axis by default. If --axis option is used\n\
 then you can explicitly choose either x or y axis. If --hMean flag\n\
 is used, then it will print the histogram mean and the stdDev.\n\
 --TH will update an outFile with TH histograms from spectraFile that\n\
-satisfy the cuts inside rootCutFile.\n\
+satisfy the cuts inside rootCutFile. If --yCut is used, then it will\n\
+use the y component of the cut (instead of the x) for a TH1. This is\n\
+useful when using cuts made from a TH2 in a TH1.\n\
 --PT0  will make an attempt to give a punch through value.\n\
 By default the used axis will be x. ${red}Make sure the file is already cutted.${NC}\n\
 --draw will simply draw the histograms corresponding to tNumOrName.\n\
@@ -1107,6 +1109,14 @@ function createTHFile {
     spectraFile="$1"
     rootCutFile="$2"
     outFile="$3"
+    myOption="$4"
+
+    myAxVar="x"
+    if [ "$myOption" = "--yCut" ]
+    then
+	echo "--yCut option being used"
+	myAxVar="y"
+    fi
 
     myTHSuffix=$(basename $rootCutFile .cut)
     myTHSuffix=$(basename $myTHSuffix .root) #Just in case
@@ -1125,7 +1135,7 @@ function createTHFile {
 	    root -l -q $macrosDir/fillCutSpectra.C\(\"${rootCutFile}\",\"${spectraFile}\",\"${hCV}\",\"${hVBase}\","false","false",0,1024,"false",0,1024,"true",\"$outFile\",\"$hV\"\) > /dev/null
 	elif [[ "$myGreatV" =~ "TH1" ]]
 	then
-	    maxMinVar=($(getMaxAndMin $hVBase $rootCutFile "x"))
+	    maxMinVar=($(getMaxAndMin $hVBase $rootCutFile "$myAxVar"))
 	    maxX=${maxMinVar[0]}
 	    minX=${maxMinVar[1]}
 	    root -l -q $macrosDir/simpleTH1Mean.C\(\"${spectraFile}\",\"${hVBase}\",$minX,$maxX,"false","true",\"$outFile\",\"$hV\"\) | tail -1
