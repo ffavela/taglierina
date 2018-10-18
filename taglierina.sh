@@ -53,6 +53,8 @@ function getPTVal0 {
     echo -e "#hitogramName\tPTVal"
     listRootTHs $spectraFile | while read myStr;
     do
+	testVar=$(echo "$myStr" | grep "^[ ]*TH")
+	[ "$testVar" = "" ] && continue
     	nVar=$(echo "$myStr" | cut -f2)
     	probeVal=$(echo "$myStr" | cut -f1)
 	echo -ne "$nVar\t"
