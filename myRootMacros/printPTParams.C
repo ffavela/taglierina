@@ -95,7 +95,7 @@ Int_t getLiftBin(TH1D *myTH1,Int_t maxPopBin){
   Int_t mySqrSum=0;
   Int_t N=0;
   Int_t myBin=maxPopBin;
-  Int_t myInitSampl=5; //Number of bins for init average etc.
+  Int_t myInitSampl=4; //Number of bins for init average etc.
 
   while(myInitSampl > 0){
     mySum+=myTH1->GetBinContent(myBin);
@@ -122,7 +122,7 @@ Int_t getLiftBin(TH1D *myTH1,Int_t maxPopBin){
     myVariance=sqrt(mySqrAverage-myAverage**2);
     myVarianceSum+=myVariance;
     myAvVariance=myVarianceSum/N;
-    if (myVariance/myAvVariance > 1.5)
+    if (myVariance/myAvVariance > 1.8)
       return myBin;
     myBin-=1;
   }
