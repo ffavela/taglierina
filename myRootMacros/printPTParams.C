@@ -8,12 +8,15 @@
 //Somehow put here the header for the #include "getPTAttempt0.C" or
 //something, for now function  is defined down.
 void getPTAttempt0(TH1D *myHToFit, Double_t *params);
+Int_t getMaxPopBin(TH1D *myTH1);
+Int_t getLiftBin(TH1D *myTH1, Int_t maxPopBin);
 
 void printPTParams(const char *cuttedSpeFN, const char *hName,
                     int type,const char *axis="x") {
   // printf("Hello fantastic world\n");
 
   TFile *fHistos = new TFile(cuttedSpeFN,"update");
+  Int_t maxPopBin, liftBin;
 
   if (type == 2) {
     TH2D *myH2Stuff=(TH2D *)fHistos->Get(hName);
@@ -26,10 +29,15 @@ void printPTParams(const char *cuttedSpeFN, const char *hName,
   }
 
   //Now call the function somehow
-  Double_t params[3];
-  getPTAttempt0(projSpect,params);
+  // Double_t params[3];
+  // getPTAttempt0(projSpect,params);
   // printf("%0.3f\t%0.3f\t%0.3f\n",params[0],params[1],params[2]);
-  printf("%0.3f\n",params[0]);
+
+  // printf("%0.3f\n",params[0]);
+
+  maxPopBin=getMaxPopBin(projSpect);
+  liftBin=getLiftBin(projSpect, maxPopBin);
+  printf("%d\n",liftBin);
   return;
 }
 
@@ -66,4 +74,57 @@ void getPTAttempt0(TH1D *myHToFit, Double_t *params) {
 
   //the params values can now be accesed from outside the function
   return;
+}
+
+Int_t getMaxPopBin(TH1D *myTH1){
+  Int_t nCells = myTH1->GetSize();
+  Int_t maxPopBin=nCells; //Worst case scenario we return this
+
+  for (int myBin=nCells;myBin>0;myBin--){
+    if (myTH1->GetBinContent(myBin) > 0)
+      return myBin;
+  }
+  return -1;
+}
+
+Int_t getLiftBin(TH1D *myTH1,Int_t maxPopBin){
+  Double_t myAverage, mySqrAverage;
+  Double_t myVariance, myAvVariance;
+  Double_t myVarianceSum=0;
+  Int_t mySum=0;
+  Int_t mySqrSum=0;
+  Int_t N=0;
+  Int_t myBin=maxPopBin;
+  Int_t myInitSampl=5; //Number of bins for init average etc.
+
+  while(myInitSampl > 0){
+    mySum+=myTH1->GetBinContent(myBin);
+    mySqrSum+=(myTH1->GetBinContent(myBin))**2;
+    myBin-=1;
+    N+=1;
+    myInitSampl-=1;
+  }
+
+  myAverage=(1.0*mySum)/N;
+  mySqrAverage=(1.0*mySqrSum)/N;
+
+  myVariance=sqrt(mySqrAverage-myAverage**2);
+  myVarianceSum=myVariance*N;
+  myAvVariance=myVarianceSum/N;//For obviousness
+
+  while (myBin > 0){
+    mySum+=myTH1->GetBinContent(myBin);
+    mySqrSum+=(myTH1->GetBinContent(myBin))**2;
+    N+=1;
+
+    myAverage=(1.0*mySum)/N;
+    mySqrAverage=(1.0*mySqrSum)/N;
+    myVariance=sqrt(mySqrAverage-myAverage**2);
+    myVarianceSum+=myVariance;
+    myAvVariance=myVarianceSum/N;
+    if (myVariance/myAvVariance > 1.5)
+      return myBin;
+    myBin-=1;
+  }
+  return -1;
 }
