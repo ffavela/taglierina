@@ -138,10 +138,10 @@ function intError {
 function printHelp {
     echo -e "usage:"
 	  echo -e "\t$(basename $0) [-h|--help]"
-	  echo -e "\t$(basename $0) -n tNumOrName spectraFile rootCutFile"
+	  echo -e "\t$(basename $0) -n tNumOrName spectraFile rootCutFile [--fitGauss]"
     echo -e "\t$(basename $0) -a tNumOrNameFile spectraFile\
- rootCutFile"
-    echo -e "\t$(basename $0) -s sTNum [-e eTNum] spectraFile rootCutFile"
+ rootCutFile [--fitGauss]"
+    echo -e "\t$(basename $0) -s sTNum [-e eTNum] spectraFile rootCutFile [--fitGauss]"
 	  # echo -e "\t$(basename $0) -na histoNameFile spectraFile rootCutFile"
     echo -e "\t$(basename $0) ${red}--sampleConf${NC}"
 	  # echo -e "\t$(basename $0) (-t telesNum | -a goodTelFile) spectraFile [rootCutFile]"
@@ -437,6 +437,10 @@ function doTheCut {
     fi
     spectraFile="$2"
     rootCFile=$myCutFile
+    myC2Fit=""
+    # gBool=$(findOptVar "--fitGauss" "$@")
+    [ "$gBool" = "true" ] && myC2Fit="gauss"
+
     [ ! "$3" = "" ] && rootCFile="$3"
     echo -e "${red}Press enter after selecting the region${NC}" >&2
 
@@ -445,7 +449,7 @@ function doTheCut {
     while [ "$runDraw" = "true" ]
     do
 	runDraw="false"
-	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\",\"${myColB}\"\)
+	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\",\"${myColB}\",\"${myC2Fit}\"\)
 	if [ -e $specialLogF ]
 	then
 	    echo "specialLogF contents are" >&2
@@ -544,8 +548,10 @@ function doAllCuts {
             optionalVar=""
             echo "optionalVar=$optionalVar" >&2
         fi
-
-	      doTheCut $optionalVar $value $spectraFile $myRCFile ||\
+        fOpt=""
+        fBool=$(findOptVar "--fitGauss" "$@")
+        [ "$fBool" = "true" ] && fOpt="--fitGauss"
+	      doTheCut $optionalVar $value $spectraFile $myRCFile $fOpt||\
             let myIdx=$myIdx-2
 	      let myIdx=$myIdx+1
     done
@@ -1262,6 +1268,9 @@ function getRangeArr {
 ##########The usage!!#############################
 # checkArgNum $@
 # source $confFile
+
+export gBool=$(findOptVar "--fitGauss" "$@")
+
 checkOpt $@
 
 # echo -e "${red}$(basename $0) arguments are ${1} and ${2}${NC}"

@@ -3,15 +3,16 @@
 #include "TTimer.h"
 #include "TSystem.h"
 #include "TObject.h"
+#include <iostream>
 
 int myH2Cutter(const char *name,
-	       const char *fileName="MySpectra212.root",
-	       const char *myCutFileName="myCutFile.root",
-	       const char *colorB="False"){
+               const char *fileName="MySpectra212.root",
+               const char *myCutFileName="myCutFile.root",
+               const char *colorB="False",
+               const char *curve2Fit="nogauss"){
   const char *input;
 
   const char myCutName[50],innCutName[50];
-
 
   Bool_t done = kFALSE;
   char tString[50],temp[50],bName[50];
@@ -43,8 +44,30 @@ int myH2Cutter(const char *name,
   printf("myCutName = %s\n",myCutName);
   TCutG *oldCut=(TCutG *)myCuts->Get(myCutName);
   if (oldCut != 0){
-    printf("Cut is not, new cond ;-)\n");
+    printf("Cut is not new cond ;-)\n");
     oldCut->Draw("same");
+    Double_t minXVal=oldCut->GetXaxis()->GetXmin();
+    Double_t maxXVal=oldCut->GetXaxis()->GetXmax();
+    //Note: root annoyingly gives always a slightly lower and upper
+    //value for the respective min and max values!
+
+    // printf("minXVal, maxXVal = %0.3f, %0.3f\n",minXVal,maxXVal);
+    // oldCut->Print();
+    // printf("The value of the new variable is %s\n",curve2Fit);
+    if (curve2Fit == "gauss"){
+      // printf("Made it inside the newest condition\n");
+      // myH2Stuff->Fit("gaus","Q0");
+      myH2Stuff->Fit("gaus","","",minXVal,maxXVal);
+      TF1 *fit = myH2Stuff->GetFunction("gaus");
+      Double_t p0 = fit->GetParameter(0);//Constant
+      Double_t p1 = fit->GetParameter(1);//Mean
+      Double_t p2 = fit->GetParameter(2);//Sigma
+
+      printf("Gauss Mean\tSigma\tConstant\n");
+      printf("%0.3f\t%0.3f\t%0.3f\n",p1,p2,p0);//Nicer print
+      fit->Draw("same");
+    }
+
   }
 
   do {
