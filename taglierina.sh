@@ -448,8 +448,8 @@ function doTheCut {
     myColB="False"
     while [ "$runDraw" = "true" ]
     do
-	runDraw="false"
-	root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\",\"${myColB}\",\"${myC2Fit}\"\)
+	      runDraw="false"
+	      root -l -q $macrosDir/myH2Cutter.C\(\"${histoVar}\",\"${spectraFile}\",\"${rootCFile}\",\"${myColB}\",\"${myC2Fit}\",\"${logy4H1}\"\)
 	if [ -e $specialLogF ]
 	then
 	    echo "specialLogF contents are" >&2
@@ -1171,6 +1171,7 @@ function createSampConf(){
     echo "#########CONFIGURATION PART##########">$confFile
     echo "myShift=50000">>$confFile
     echo "myPrefix=\"h\"">>$confFile
+    echo "logy4H1=\"False\" #for TH1">>$confFile
     echo "#####################################">>$confFile
     echo -e "Created configuration file named ${red}$confFile${NC}."
     echo -e "The content is:\n"

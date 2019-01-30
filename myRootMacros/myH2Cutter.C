@@ -9,7 +9,8 @@ int myH2Cutter(const char *name,
                const char *fileName="MySpectra212.root",
                const char *myCutFileName="myCutFile.root",
                const char *colorB="False",
-               const char *curve2Fit="nogauss"){
+               const char *curve2Fit="nogauss",
+               const char *logyB="False"){
   const char *input;
 
   const char myCutName[50],innCutName[50];
@@ -33,6 +34,9 @@ int myH2Cutter(const char *name,
   TCanvas *c1 = new TCanvas("c1", "Select cut region", 900, 750);
   c1->ToggleToolBar();
   c1->ToggleEventStatus();
+
+  if (logyB == "True")
+    c1->SetLogy();
 
   if (colorB == "False")
     myH2Stuff->Draw();
